@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academia Vitturi Sports — Sistema Online</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#202124}
+header{background:#111;color:#fff;padding:16px 22px;font-size:21px;font-weight:700}
+nav{background:#fff;border-bottom:1px solid #ddd;padding:10px 18px;display:flex;gap:7px;flex-wrap:wrap}
+nav button{border:0;background:#eee;padding:10px 13px;border-radius:7px;cursor:pointer}nav button.active{background:#111;color:#fff}
+main{max-width:1250px;margin:18px auto;padding:0 14px}.tab{display:none}.tab.active{display:block}
+.box,.card{background:#fff;border-radius:11px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px #00000010}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:5px}
+input,select,button{font:inherit}input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:7px}
+button.primary{background:#111;color:#fff;border:0;padding:11px 16px;border-radius:7px;cursor:pointer;font-weight:700}
+button.secondary{background:#e9ecef;border:0;padding:9px 13px;border-radius:7px;cursor:pointer}
+button.danger{background:#b42318;color:#fff;border:0;padding:7px 10px;border-radius:6px;cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.cards .card{margin:0}.cards small{color:#666}.cards b{display:block;font-size:24px;margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;border-bottom:1px solid #eee;text-align:left;font-size:13px}th{background:#f7f7f7}
+.muted{color:#666;font-size:13px}.hidden{display:none!important}.ok{color:#087f23}.warn{color:#a15c00}.error{color:#b42318}
+.result{padding:12px;background:#eef7ef;border-radius:8px;margin-top:10px}.payment-row{display:grid;grid-template-columns:1fr 160px auto;gap:8px;margin:8px 0}
+.setup{max-width:650px;margin:35px auto}.title{font-size:19px;font-weight:700;margin-bottom:12px}.status{padding:10px;border-radius:7px;margin:10px 0;background:#f5f5f5}
+@media(max-width:850px){.grid,.cards{grid-template-columns:1fr 1fr}.payment-row{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:600px){.grid,.cards{grid-template-columns:1fr}table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body>
+<header>ACADEMIA VITTURI SPORTS — SISTEMA DE GESTÃO ONLINE</header>
+
+<div id="setup" class="setup box">
+  <div class="title">Configuração inicial</div>
+  <p class="muted">Esta tela aparece somente neste computador. A chave não é enviada para o ChatGPT; ela fica no navegador deste computador.</p>
+  <label>Project URL</label>
+  <input id="cfgUrl" value="https://gymiroswckbotsjscdzc.supabase.co" placeholder="https://seu-projeto.supabase.co">
+  <br>
+  <label>Publishable key</label>
+  <input id="cfgKey" type="password" placeholder="Cole aqui sua Publishable key">
+  <br>
+  <button class="primary" onclick="saveConfig()">SALVAR CONFIGURAÇÃO</button>
+  <div id="cfgMsg" class="status"></div>
+</div>
+
+<div id="login" class="setup box hidden">
+  <div class="title">Entrar no sistema</div>
+  <label>E-mail</label><input id="email" type="email">
+  <br><label>Senha</label><input id="senha" type="password">
+  <br><button class="primary" onclick="login()">ENTRAR</button>
+  <div id="loginMsg" class="status"></div>
+</div>
+
+<div id="app" class="hidden">
+<nav>
+<button class="active" onclick="aba('inicio',this)">Início</button>
+<button onclick="aba('alunos',this)">Alunos</button>
+<button onclick="aba('pagamento',this)">Atendimento</button>
+<button onclick="aba('planos',this)">Planos</button>
+<button onclick="aba('vendas',this)">Vendas (suplementos / bebidas)</button>
+<button onclick="aba('avaliacoes',this)">Avaliações</button>
+<button onclick="aba('relatorios',this)">Relatórios</button>
+<button onclick="aba('admin',this)">Administração</button>
+<button onclick="logout()">Sair</button>
+</nav>
+<main>
+
+<section id="inicio" class="tab active">
+<div class="cards">
+<div class="card"><small>Alunos</small><b id="dashAlunos">0</b></div>
+<div class="card"><small>Operações hoje</small><b id="dashOps">0</b></div>
+<div class="card"><small>Recebido hoje</small><b id="dashValor">R$ 0,00</b></div>
+<div class="card"><small>GymPass hoje</small><b id="dashGym">0</b></div>
+</div>
+<div class="box">
+<h2>Atendimento na recepção</h2>
+<p>Digite o <b>código existente do aluno</b>. O sistema localiza o cadastro e permite lançar mensalidade, venda, avaliação ou GymPass.</p>
+<p class="muted">Os valores históricos são gravados no momento do lançamento.</p>
+</div>
+</section>
+
+<section id="alunos" class="tab">
+<div class="box"><h2>Cadastro / edição de aluno</h2>
+<input type="hidden" id="oldCode">
+<div class="grid">
+<div><label>Código do aluno *</label><input id="aCodigo"></div>
+<div><label>Nome *</label><input id="aNome"></div>
+<div><label>CPF</label><input id="aCpf"></div>
+<div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
+<div><label>Gênero</label><select id="aGenero"><option value="">Não informado</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+<div><label>Telefone</label><input id="aTel"></div>
+<div><label>Data de cadastro</label><input id="aCadastro" type="date"></div>
+<div><label>Plano atual</label><select id="aPlano"></select></div>
+<div><label>Status</label><select id="aStatus"><option>Ativo</option><option>Inativo</option></select></div>
+</div><br>
+<button class="primary" onclick="salvarAluno()">SALVAR ALUNO</button>
+<button class="secondary" onclick="limparAluno()">NOVO</button>
+<div id="alunoMsg" class="status"></div></div>
+<div class="box"><h2>Pesquisar alunos</h2><input id="buscaAluno" oninput="renderAlunos()" placeholder="Código, nome ou CPF">
+<table><thead><tr><th>Código</th><th>Nome</th><th>Plano</th><th>CPF</th><th>Status</th><th>Ação</th></tr></thead><tbody id="listaAlunos"></tbody></table></div>
+</section>
+
+<section id="pagamento" class="tab">
+<div class="box"><h2>Atendimento / lançamento rápido</h2>
+<div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label>Data</label><input id="pData" type="date"></div></div>
+<div id="pAluno" class="result hidden"></div>
+<div id="operacoes" class="hidden"><h3>O que o aluno está pagando?</h3>
+<div style="display:flex;gap:7px;flex-wrap:wrap">
+<button class="primary" onclick="tipoAtendimento('mensalidade')">Mensalidade</button>
+<button class="primary" onclick="tipoAtendimento('venda')">Venda</button>
+<button class="primary" onclick="tipoAtendimento('avaliacao')">Avaliação</button>
+<button class="primary" onclick="tipoAtendimento('gympass')">GymPass</button>
+</div></div>
+<div id="itemArea" class="hidden" style="margin-top:14px">
+<label id="itemLabel">Item</label><select id="itemSelect" onchange="atualizarValor()"></select>
+<div class="result">Valor: <b id="itemValor">R$ 0,00</b></div>
+</div>
+<div id="gymArea" class="hidden result" style="margin-top:14px">
+<div id="gymInfo"></div><button class="primary" style="margin-top:10px" onclick="registrarGym()">CONFIRMAR CHECK-IN</button>
+</div>
+<div id="payArea" class="hidden" style="margin-top:14px">
+<h3>Forma de pagamento</h3><div id="paymentRows"></div>
+<button class="secondary" onclick="addPaymentRow()">+ Outra forma de pagamento</button>
+<div class="result" style="margin-top:12px">
+<div>Total: <b id="payTotal">R$ 0,00</b></div>
+<div>Pago: <b id="payPaid">R$ 0,00</b></div>
+<div>Restante: <b id="payRest">R$ 0,00</b></div>
+<div id="payStatus"></div></div>
+<button class="primary" style="width:100%;margin-top:12px" onclick="registrarPagamento()">CONFIRMAR PAGAMENTO</button>
+</div>
+<div id="pMsg" class="status"></div>
+</div>
+</section>
+
+<section id="planos" class="tab"><div class="box"><h2>Planos</h2>
+<div class="grid2"><div><label>Nome</label><input id="plNome"></div><div><label>Valor</label><input id="plValor" type="number" step="0.01"></div></div><br>
+<button class="primary" onclick="addPlano()">ADICIONAR</button>
+<table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
+
+<section id="vendas" class="tab"><div class="box"><h2>Vendas (suplementos / bebidas)</h2>
+<div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Valor</label><input id="prValor" type="number" step="0.01"></div></div><br>
+<button class="primary" onclick="addProduto()">ADICIONAR</button>
+<table><thead><tr><th>ID</th><th>Produto</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaProdutos"></tbody></table></div></section>
+
+<section id="avaliacoes" class="tab"><div class="box"><h2>Tipos de avaliação</h2>
+<div class="grid2"><div><label>Nome</label><input id="avNome"></div><div><label>Valor</label><input id="avValor" type="number" step="0.01"></div></div><br>
+<button class="primary" onclick="addTipoAvaliacao()">ADICIONAR</button>
+<table><thead><tr><th>ID</th><th>Avaliação</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaAvaliacoes"></tbody></table></div></section>
+
+<section id="relatorios" class="tab"><div class="box"><h2>Relatórios</h2>
+<div class="grid"><div><label>Período</label><select id="rPeriodo" onchange="toggleCustom();gerarRelatorio()"><option value="today">Hoje</option><option value="month">Mês atual</option><option value="custom">Período personalizado</option></select></div>
+<div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
+<div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
+<div class="cards" style="margin-top:14px"><div class="card"><small>Total recebido</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
+<h3>Formas de pagamento</h3><div id="rMethods" class="muted"></div>
+<h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody id="rList"></tbody></table></div>
+<h3>GymPass</h3><div id="rGymSummary" class="muted"></div>
+</div></section>
+
+<section id="admin" class="tab"><div class="box"><h2>Configurações</h2>
+<p class="muted">Valores e cadastros abaixo podem ser alterados. O histórico de pagamentos mantém o valor gravado na data do lançamento.</p>
+<div class="grid2"><div><label>GymPass — 1º ao 15º check-in</label><input id="g15" type="number" step="0.01"></div><div><label>GymPass — a partir do 16º</label><input id="g16" type="number" step="0.01"></div></div><br>
+<button class="primary" onclick="salvarGymConfig()">SALVAR GYMPASS</button><div id="admMsg" class="status"></div></div></section>
+
+</main></div>
+
+<script>
+const PROJECT_URL='https://gymiroswckbotsjscdzc.supabase.co';
+let sb=null, user=null, alunos=[], planos=[], produtos=[], tiposAv=[];
+let alunoAtendimento=null, tipoAtual='', valorAtualNum=0, paymentRows=[];
+
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const localDate=()=>{let d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const val=id=>Number(document.getElementById(id).value||0);
+
+function saveConfig(){
+ const key=document.getElementById('cfgKey').value.trim();
+ const url=document.getElementById('cfgUrl').value.trim().replace(/\/rest\/v1\/?$/,'');
+ if(!key||!url){document.getElementById('cfgMsg').textContent='Informe a URL e a Publishable key.';return}
+ localStorage.setItem('vitturi_supabase_url',url);localStorage.setItem('vitturi_supabase_key',key);
+ initSupabase();
+}
+function initSupabase(){
+ const url=localStorage.getItem('vitturi_supabase_url')||PROJECT_URL;
+ const key=localStorage.getItem('vitturi_supabase_key');
+ if(!key){document.getElementById('setup').classList.remove('hidden');return}
+ sb=window.supabase.createClient(url,key);
+ document.getElementById('setup').classList.add('hidden');
+ sb.auth.getSession().then(({data})=>{if(data.session){user=data.session.user;startApp()}else document.getElementById('login').classList.remove('hidden')});
+}
+async function login(){
+ const email=document.getElementById('email').value.trim(),password=document.getElementById('senha').value;
+ const {data,error}=await sb.auth.signInWithPassword({email,password});
+ if(error){document.getElementById('loginMsg').textContent='Não foi possível entrar: '+error.message;return}
+ user=data.user;document.getElementById('login').classList.add('hidden');startApp();
+}
+async function logout(){await sb.auth.signOut();location.reload()}
+function aba(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio()}
+
+async function loadAll(){
+ const q=await Promise.all([
+  sb.from('Alunos').select('*').order('codigo'),
+  sb.from('Planos').select('*').order('nome'),
+  sb.from('Produtos').select('*').order('nome'),
+  sb.from('tipos_avaliacao').select('*').order('nome')
+ ]);
+ [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
+ if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
+ fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();updateDashboard();loadGymConfig();
+}
+async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate()}
+
+function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
+function renderAlunos(){
+ const q=document.getElementById('buscaAluno').value.toLowerCase();
+ document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="editarAluno('${esc(a.codigo)}')">Editar</button></td></tr>`).join('');
+}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo'}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';aba('alunos',document.querySelectorAll('nav button')[1])}
+async function salvarAluno(){
+ const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
+ if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
+ const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,status:document.getElementById('aStatus').value};
+ let res;
+ if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}else{res=await sb.from('Alunos').insert(obj)}
+ if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
+ document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
+}
+
+function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
+async function tipoAtendimento(t){
+ tipoAtual=t;document.getElementById('itemArea').classList.add('hidden');document.getElementById('gymArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');
+ if(t==='gympass'){await atualizarGymInfo();return}
+ const sel=document.getElementById('itemSelect');let arr=t==='mensalidade'?planos:t==='venda'?produtos:tiposAv;
+ arr=arr.filter(x=>x.ativo);sel.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.nome)} — ${money(x.valor)}</option>`).join('');
+ document.getElementById('itemLabel').textContent=t==='mensalidade'?'Plano':t==='venda'?'Produto':'Tipo de avaliação';
+ document.getElementById('itemArea').classList.remove('hidden');atualizarValor();
+}
+function atualizarValor(){let sel=document.getElementById('itemSelect');let id=Number(sel.value);let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv;let x=arr.find(a=>a.id===id);valorAtualNum=Number(x?.valor||0);document.getElementById('itemValor').textContent=money(valorAtualNum);document.getElementById('payArea').classList.remove('hidden');paymentRows=[];addPaymentRow();renderPayments()}
+const methods=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
+function addPaymentRow(){paymentRows.push({f:'Dinheiro',v:0});renderPayments()}
+function renderPayments(){document.getElementById('paymentRows').innerHTML=paymentRows.map((p,i)=>`<div class="payment-row"><select onchange="paymentRows[${i}].f=this.value">${methods.map(m=>`<option ${m===p.f?'selected':''}>${m}</option>`).join('')}</select><input type="number" step="0.01" value="${p.v||''}" oninput="paymentRows[${i}].v=Number(this.value||0);sumPayments()"><button class="danger" onclick="paymentRows.splice(${i},1);renderPayments()">X</button></div>`).join('');sumPayments()}
+function sumPayments(){let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0),r=valorAtualNum-paid;document.getElementById('payTotal').textContent=money(valorAtualNum);document.getElementById('payPaid').textContent=money(paid);document.getElementById('payRest').textContent=money(Math.max(r,0));document.getElementById('payStatus').textContent=Math.abs(r)<.005?'✓ Pagamento completo':r>0?'Falta '+money(r):'Valor acima do total';document.getElementById('payStatus').className=Math.abs(r)<.005?'ok':r>0?'warn':'error'}
+async function registrarPagamento(){
+ if(!alunoAtendimento)return;let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0);if(Math.abs(paid-valorAtualNum)>.005){alert('O pagamento precisa fechar exatamente o valor total.');return}
+ let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv,id=Number(document.getElementById('itemSelect').value),item=arr.find(x=>x.id===id);
+ const descricao=item?.nome||'', tipo=tipoAtual==='mensalidade'?'mensalidade':tipoAtual==='venda'?'venda':'avaliacao';
+ const data=document.getElementById('pData').value||localDate();
+ const r=await sb.from('Pagamentos').insert({aluno_codigo:alunoAtendimento.codigo,tipo,descricao,valor_total:valorAtualNum,data_pagamento:data}).select('id').single();
+ if(r.error){alert('Erro ao registrar pagamento: '+r.error.message);return}
+ const formas=paymentRows.map(x=>({pagamento_id:r.data.id,forma_pagamento:x.f,valor:Number(x.v)}));
+ const f=await sb.from('pagamento_formas').insert(formas);if(f.error){alert('Pagamento criado, mas houve erro nas formas: '+f.error.message);return}
+ document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';paymentRows=[];document.getElementById('payArea').classList.add('hidden');updateDashboard();
+}
+async function atualizarGymInfo(){
+ const data=document.getElementById('pData').value||localDate(), month=data.slice(0,7);
+ const q=await sb.from('gympass_checkins').select('numero_checkin,aluno_codigo,data_checkin').eq('aluno_codigo',alunoAtendimento.codigo).gte('data_checkin',month+'-01').lte('data_checkin',month+'-31').order('numero_checkin');
+ const count=(q.data||[]).length,next=count+1;const cfg=await sb.from('gympass_config').select('*').eq('ativo',true).limit(1).maybeSingle();const c=cfg.data||{valor_ate_15:8.51,valor_a_partir_16:1.87};const rate=next<=15?Number(c.valor_ate_15):Number(c.valor_a_partir_16);
+ document.getElementById('gymInfo').innerHTML=`<b>${esc(alunoAtendimento.nome)}</b><br>Este será o <strong>${next}º check-in do mês</strong>.<br>Valor: <strong>${money(rate)}</strong><br><span class="muted">O sistema impede dois check-ins do mesmo aluno no mesmo dia.</span>`;
+ document.getElementById('gymArea').classList.remove('hidden');window.gymTemp={data,next,rate};
+}
+async function registrarGym(){if(!alunoAtendimento||!window.gymTemp)return;let t=window.gymTemp;const r=await sb.from('gympass_checkins').insert({aluno_codigo:alunoAtendimento.codigo,data_checkin:t.data,numero_checkin:t.next,valor:t.rate});if(r.error){alert(r.error.code==='23505'?'Este aluno já possui check-in hoje.':'Erro: '+r.error.message);return}document.getElementById('pMsg').textContent=`Check-in ${t.next}º registrado — ${money(t.rate)}.`;document.getElementById('gymArea').classList.add('hidden');updateDashboard()}
+
+async function addPlano(){let nome=document.getElementById('plNome').value.trim(),valor=val('plValor');if(!nome)return;let r=await sb.from('Planos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('plNome').value='';document.getElementById('plValor').value='';await loadAll()}
+async function addProduto(){let nome=document.getElementById('prNome').value.trim(),valor=val('prValor');if(!nome)return;let r=await sb.from('Produtos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('prNome').value='';document.getElementById('prValor').value='';await loadAll()}
+async function addTipoAvaliacao(){let nome=document.getElementById('avNome').value.trim(),valor=val('avValor');if(!nome)return;let r=await sb.from('tipos_avaliacao').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('avNome').value='';document.getElementById('avValor').value='';await loadAll()}
+function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
+function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
+function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
+async function editarCatalogo(table,id,nome,valor,ativo){let n=prompt('Nome:',nome);if(n===null)return;let v=prompt('Valor:',valor);if(v===null)return;let a=confirm('Deixar ativo?');let r=await sb.from(table).update({nome:n,valor:Number(v),ativo:a}).eq('id',id);if(r.error)alert(r.error.message);else loadAll()}
+
+async function loadGymConfig(){let r=await sb.from('gympass_config').select('*').eq('ativo',true).limit(1).maybeSingle();if(r.data){document.getElementById('g15').value=r.data.valor_ate_15;document.getElementById('g16').value=r.data.valor_a_partir_16}}
+async function salvarGymConfig(){let r=await sb.from('gympass_config').update({valor_ate_15:val('g15'),valor_a_partir_16:val('g16')}).eq('ativo',true);document.getElementById('admMsg').textContent=r.error?'Erro: '+r.error.message:'Configuração GymPass salva com sucesso.'}
+
+async function updateDashboard(){
+ const today=localDate();let [a,p,g]=await Promise.all([sb.from('Alunos').select('codigo',{count:'exact',head:true}),sb.from('Pagamentos').select('valor_total').eq('data_pagamento',today),sb.from('gympass_checkins').select('id',{count:'exact',head:true}).eq('data_checkin',today)]);
+ let total=(p.data||[]).reduce((s,x)=>s+Number(x.valor_total||0),0);document.getElementById('dashAlunos').textContent=a.count??0;document.getElementById('dashOps').textContent=(p.data||[]).length;document.getElementById('dashValor').textContent=money(total);document.getElementById('dashGym').textContent=g.count??0;
+}
+function toggleCustom(){let on=document.getElementById('rPeriodo').value==='custom';document.getElementById('rFromBox').classList.toggle('hidden',!on);document.getElementById('rToBox').classList.toggle('hidden',!on)}
+async function gerarRelatorio(){
+ if(!sb)return;let mode=document.getElementById('rPeriodo').value,today=localDate(),start=today,end=today;
+ if(mode==='month'){let d=new Date();start=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';end=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10)}
+ if(mode==='custom'){start=document.getElementById('rFrom').value;end=document.getElementById('rTo').value}
+ if(!start||!end)return;
+ const p=await sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false});
+ const payments=p.data||[];let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
+ let total=payments.reduce((s,x)=>s+Number(x.valor_total||0),0),mens=payments.filter(x=>x.tipo==='mensalidade').reduce((s,x)=>s+Number(x.valor_total||0),0),vendas=payments.filter(x=>x.tipo==='venda').reduce((s,x)=>s+Number(x.valor_total||0),0),avs=payments.filter(x=>x.tipo==='avaliacao').reduce((s,x)=>s+Number(x.valor_total||0),0);
+ document.getElementById('rTotal').textContent=money(total);document.getElementById('rMens').textContent=money(mens);document.getElementById('rVendas').textContent=money(vendas);document.getElementById('rAv').textContent=money(avs);
+ let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
+ document.getElementById('rList').innerHTML=payments.map(x=>`<tr><td>${x.data_pagamento}</td><td>${esc(x.aluno_codigo)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(f.forma_pagamento)+' '+money(f.valor)).join(' + ')}</td></tr>`).join('');
+ const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
+}
+initSupabase();
+</script>
+</body>
+</html>
