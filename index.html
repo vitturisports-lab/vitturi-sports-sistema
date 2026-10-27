@@ -39,7 +39,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
   <label>Publishable key</label>
   <input id="cfgKey" type="password" placeholder="Cole aqui sua Publishable key">
   <br>
-  <button class="primary" onclick="saveConfig()">SALVAR CONFIGURAÇÃO</button>
+  <button class="primary" onclick="saveConfig()">SALVAR CONFIGURAÇÃO</button> <button type="button" class="secondary" onclick="testarConexao()">TESTAR CONEXÃO</button>
   <div id="cfgMsg" class="status"></div>
 </div>
 
@@ -47,7 +47,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
   <div class="title">Entrar no sistema</div>
   <label>E-mail</label><input id="email" type="email">
   <br><label>Senha</label><input id="senha" type="password">
-  <br><button class="primary" onclick="login()">ENTRAR</button>
+  <br><button class="primary" onclick="login()">ENTRAR</button> <button type="button" onclick="trocarConfiguracao()">TROCAR CONFIGURAÇÃO</button>
   <div id="loginMsg" class="status"></div>
 </div>
 
@@ -92,6 +92,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div><label>Data de cadastro</label><input id="aCadastro" type="date"></div>
 <div><label>Plano atual</label><select id="aPlano"></select></div>
 <div><label>Status</label><select id="aStatus"><option>Ativo</option><option>Inativo</option></select></div>
+<div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
+<div id="categoriaAlunoBox"><label>Categoria do aluno</label><select id="aCategoriaAluno"><option value="">Selecione</option><option value="Trânsito Livre">Trânsito Livre</option><option value="Personal Trainer">Personal Trainer</option></select></div>
 </div><br>
 <button class="primary" onclick="salvarAluno()">SALVAR ALUNO</button>
 <button class="secondary" onclick="limparAluno()">NOVO</button>
@@ -174,6 +176,22 @@ const localDate=()=>{let d=new Date();return d.getFullYear()+'-'+String(d.getMon
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const val=id=>Number(document.getElementById(id).value||0);
 
+async function testarConexao(){
+ const key=document.getElementById('cfgKey').value.trim();
+ const url=document.getElementById('cfgUrl').value.trim().replace(/\/rest\/v1\/?$/,'');
+ const msg=document.getElementById('cfgMsg');
+ if(!url||!key){msg.textContent='Informe a URL e a Publishable key antes de testar.';return}
+ if(!/^sb_publishable_/.test(key) && !/^eyJ/.test(key)){msg.textContent='A chave não parece ser uma Publishable key do Supabase. Ela normalmente começa com sb_publishable_';return}
+ msg.textContent='Testando conexão com o Supabase...';
+ try{
+  const r=await fetch(url+'/rest/v1/',{method:'GET',headers:{apikey:key,Authorization:'Bearer '+key}});
+  const text=await r.text();
+  if(r.ok){msg.innerHTML='<span class="ok">Conexão OK! O Supabase respondeu corretamente.</span>';return true}
+  if(r.status===401){msg.innerHTML='<span class="error">A chave foi recusada pelo Supabase (401). Copie novamente a Publishable key do projeto Vitturi Sports Sistema.</span>';return false}
+  msg.textContent='Supabase respondeu HTTP '+r.status+': '+text.slice(0,200);
+ }catch(e){msg.innerHTML='<span class="error">O navegador não conseguiu acessar o Supabase: '+esc(e.message||e)+'. Isso indica bloqueio/conexão do navegador, não senha.</span>';return false}
+}
+
 function saveConfig(){
  const key=document.getElementById('cfgKey').value.trim();
  const url=document.getElementById('cfgUrl').value.trim().replace(/\/rest\/v1\/?$/,'');
@@ -182,6 +200,7 @@ function saveConfig(){
  initSupabase();
 }
 function initSupabase(){
+ if(!window.supabase){document.getElementById('cfgMsg').textContent='A biblioteca do Supabase não carregou. Verifique a internet ou bloqueio de extensões e recarregue a página.';document.getElementById('setup').classList.remove('hidden');return}
  const url=localStorage.getItem('vitturi_supabase_url')||PROJECT_URL;
  const key=localStorage.getItem('vitturi_supabase_key');
  if(!key){document.getElementById('setup').classList.remove('hidden');return}
@@ -191,9 +210,28 @@ function initSupabase(){
 }
 async function login(){
  const email=document.getElementById('email').value.trim(),password=document.getElementById('senha').value;
- const {data,error}=await sb.auth.signInWithPassword({email,password});
- if(error){document.getElementById('loginMsg').textContent='Não foi possível entrar: '+error.message;return}
- user=data.user;document.getElementById('login').classList.add('hidden');startApp();
+ try{
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error){
+   const msg=String(error.message||'');
+   document.getElementById('loginMsg').textContent='Não foi possível entrar: '+msg;
+   if(/invalid api key|apikey/i.test(msg)){
+    localStorage.removeItem('vitturi_supabase_key');
+    document.getElementById('setup').classList.remove('hidden');
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('cfgMsg').textContent='A chave salva não foi aceita pelo Supabase. Cole novamente a Publishable key correta em Configuração inicial.';
+   }
+   return
+  }
+  user=data.user;document.getElementById('login').classList.add('hidden');startApp();
+ }catch(e){document.getElementById('loginMsg').textContent='Não foi possível entrar: '+(e.message||e)}
+}
+function trocarConfiguracao(){
+ localStorage.removeItem('vitturi_supabase_key');
+ document.getElementById('login').classList.add('hidden');
+ document.getElementById('setup').classList.remove('hidden');
+ document.getElementById('cfgKey').value='';
+ document.getElementById('cfgMsg').textContent='Cole aqui a Publishable key atual do Supabase.';
 }
 async function logout(){await sb.auth.signOut();location.reload()}
 function aba(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio()}
@@ -216,12 +254,13 @@ function renderAlunos(){
  const q=document.getElementById('buscaAluno').value.toLowerCase();
  document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="editarAluno('${esc(a.codigo)}')">Editar</button></td></tr>`).join('');
 }
-function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo'}
-function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';aba('alunos',document.querySelectorAll('nav button')[1])}
+function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value=''}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';atualizarCategoriaAluno()}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
 async function salvarAluno(){
  const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
  if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
- const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,status:document.getElementById('aStatus').value};
+ const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,status:document.getElementById('aStatus').value,tipo_pessoa:document.getElementById('aTipoPessoa').value,categoria_aluno:document.getElementById('aTipoPessoa').value==='Aluno'?(document.getElementById('aCategoriaAluno').value||null):null};
  let res;
  if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}else{res=await sb.from('Alunos').insert(obj)}
  if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
