@@ -89,7 +89,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
 <div><label>Gênero</label><select id="aGenero"><option value="">Não informado</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
 <div><label>Telefone</label><input id="aTel"></div>
-<div><label>Data de cadastro</label><input id="aCadastro" type="date"></div>
+<div><label>Data de cadastro (data real de entrada)</label><input id="aCadastro" type="date"></div>
+<div><label>Taxa de matrícula</label><select id="aTaxaStatus"><option value="Pendente">Pendente</option><option value="Já paga">Já paga</option><option value="Isento">Isento</option></select></div>
 <div><label>Plano atual</label><select id="aPlano"></select></div>
 <div><label>Status</label><select id="aStatus"><option>Ativo</option><option>Inativo</option></select></div>
 <div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
@@ -115,7 +116,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 </div></div>
 <div id="itemArea" class="hidden" style="margin-top:14px">
 <label id="itemLabel">Item</label><select id="itemSelect" onchange="atualizarValor()"></select>
-<div class="result">Valor: <b id="itemValor">R$ 0,00</b></div>
+<div id="vendaQtdBox" class="hidden" style="margin-top:10px"><label>Quantidade</label><input id="vendaQtd" type="number" min="1" step="1" value="1" oninput="atualizarValor()"></div>
+<div class="result">Valor total: <b id="itemValor">R$ 0,00</b><div id="vendaEstoqueInfo" class="muted"></div></div>
 </div>
 <div id="gymArea" class="hidden result" style="margin-top:14px">
 <div id="gymInfo"></div><button class="primary" style="margin-top:10px" onclick="registrarGym()">CONFIRMAR CHECK-IN</button>
@@ -139,10 +141,18 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <button class="primary" onclick="addPlano()">ADICIONAR</button>
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
-<section id="vendas" class="tab"><div class="box"><h2>Vendas (suplementos / bebidas)</h2>
-<div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Valor</label><input id="prValor" type="number" step="0.01"></div></div><br>
-<button class="primary" onclick="addProduto()">ADICIONAR</button>
-<table><thead><tr><th>ID</th><th>Produto</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaProdutos"></tbody></table></div></section>
+<section id="vendas" class="tab">
+<div class="box"><h2>Vendas (suplementos / bebidas)</h2>
+<div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Preço de venda (R$)</label><input id="prValor" type="number" step="0.01" min="0"></div></div><br>
+<button class="primary" onclick="addProduto()">ADICIONAR PRODUTO</button>
+<p class="muted">O preço de venda pode ser alterado sem apagar o histórico de compras e vendas.</p>
+<div style="overflow:auto"><table><thead><tr><th>ID</th><th>Produto</th><th>Preço de venda</th><th>Estoque</th><th>Custo médio</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaProdutos"></tbody></table></div></div>
+<div class="box"><h2>Registrar compra / entrada no estoque</h2>
+<p class="muted">Registre cada compra separadamente. Se o fornecedor ou o custo mudar, basta lançar uma nova compra.</p>
+<div class="grid"><div><label>Produto</label><select id="compProduto"></select></div><div><label>Quantidade comprada</label><input id="compQtd" type="number" min="1" step="1" value="1"></div><div><label>Custo por unidade (R$)</label><input id="compCusto" type="number" min="0.01" step="0.01"></div><div><label>Data da compra</label><input id="compData" type="date"></div><div><label>Fornecedor</label><input id="compFornecedor" placeholder="Nome do fornecedor"></div></div><br>
+<button class="primary" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button><div id="compMsg" class="status"></div></div>
+<div class="box"><h2>Histórico de compras</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Custo unitário</th><th>Total</th><th>Fornecedor</th></tr></thead><tbody id="listaCompras"></tbody></table></div></div>
+</section>
 
 <section id="avaliacoes" class="tab"><div class="box"><h2>Tipos de avaliação</h2>
 <div class="grid2"><div><label>Nome</label><input id="avNome"></div><div><label>Valor</label><input id="avValor" type="number" step="0.01"></div></div><br>
@@ -154,8 +164,10 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
 <div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
 <div class="cards" style="margin-top:14px"><div class="card"><small>Total recebido</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
+<div class="cards" style="margin-top:12px"><div class="card"><small>Compras de estoque no período</small><b id="rCompras">R$ 0,00</b></div><div class="card"><small>Custo dos produtos vendidos</small><b id="rCustoVendas">R$ 0,00</b></div><div class="card"><small>Lucro bruto estimado (vendas com estoque)</small><b id="rLucroBruto">R$ 0,00</b></div><div class="card"><small>Observação</small><div class="muted" style="margin-top:8px">Não inclui aluguel, salários ou outras despesas.</div></div></div>
 <h3>Formas de pagamento</h3><div id="rMethods" class="muted"></div>
 <h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody id="rList"></tbody></table></div>
+<h3>Previsão de parcelas de crédito</h3><p class="muted">Previsão financeira; a data real de repasse depende da operadora do cartão.</p><div id="rParcelasSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Vencimento previsto</th><th>Aluno</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody id="rParcelasList"></tbody></table></div>
 <h3>GymPass</h3><div id="rGymSummary" class="muted"></div>
 </div></section>
 
@@ -245,9 +257,9 @@ async function loadAll(){
  ]);
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
- fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();updateDashboard();loadGymConfig();
+ fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
 }
-async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate()}
+async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate()}
 
 function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
 function renderAlunos(){
@@ -255,42 +267,85 @@ function renderAlunos(){
  document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="editarAluno('${esc(a.codigo)}')">Editar</button></td></tr>`).join('');
 }
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value=''}
-function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';atualizarCategoriaAluno()}
-function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTaxaStatus').value='Pendente';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';atualizarCategoriaAluno()}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';document.getElementById('aTaxaStatus').value=a.taxa_matricula_status||(a.taxa_matricula_paga===true?'Já paga':'Pendente');document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
 async function salvarAluno(){
  const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
  if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
- const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,status:document.getElementById('aStatus').value,tipo_pessoa:document.getElementById('aTipoPessoa').value,categoria_aluno:document.getElementById('aTipoPessoa').value==='Aluno'?(document.getElementById('aCategoriaAluno').value||null):null};
+ const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,status:document.getElementById('aStatus').value,taxa_matricula_status:document.getElementById('aTaxaStatus').value,tipo_pessoa:document.getElementById('aTipoPessoa').value,categoria_aluno:document.getElementById('aTipoPessoa').value==='Aluno'?(document.getElementById('aCategoriaAluno').value||null):null};
  let res;
  if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}else{res=await sb.from('Alunos').insert(obj)}
  if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
  document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
 }
 
-function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
+function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Taxa de matrícula: ${esc(alunoAtendimento.taxa_matricula_status|| (alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente'))}<br>Vencimento do plano: ${esc(alunoAtendimento.vencimento_plano||'Não definido')}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
 async function tipoAtendimento(t){
  tipoAtual=t;document.getElementById('itemArea').classList.add('hidden');document.getElementById('gymArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');
  if(t==='gympass'){await atualizarGymInfo();return}
  const sel=document.getElementById('itemSelect');let arr=t==='mensalidade'?planos:t==='venda'?produtos:tiposAv;
- arr=arr.filter(x=>x.ativo);sel.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.nome)} — ${money(x.valor)}</option>`).join('');
+ arr=arr.filter(x=>x.ativo);if(t==='mensalidade' && alunoAtendimento){const st=alunoAtendimento.taxa_matricula_status||(alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente');arr=arr.filter(x=>!/taxa de matrícula|taxa de matricula/i.test(x.nome)||st==='Pendente')}sel.innerHTML=arr.map(x=>`<option value="${x.id}">${esc(x.nome)} — ${money(x.valor)}</option>`).join('');
  document.getElementById('itemLabel').textContent=t==='mensalidade'?'Plano':t==='venda'?'Produto':'Tipo de avaliação';
+ document.getElementById('vendaQtdBox').classList.toggle('hidden',t!=='venda');document.getElementById('vendaEstoqueInfo').textContent='';if(t==='venda')document.getElementById('vendaQtd').value=1;
  document.getElementById('itemArea').classList.remove('hidden');atualizarValor();
 }
-function atualizarValor(){let sel=document.getElementById('itemSelect');let id=Number(sel.value);let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv;let x=arr.find(a=>a.id===id);valorAtualNum=Number(x?.valor||0);document.getElementById('itemValor').textContent=money(valorAtualNum);document.getElementById('payArea').classList.remove('hidden');paymentRows=[];addPaymentRow();renderPayments()}
+function atualizarValor(){let sel=document.getElementById('itemSelect');let id=Number(sel.value);let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv;let x=arr.find(a=>a.id===id);let qtd=tipoAtual==='venda'?Math.max(1,Math.floor(Number(document.getElementById('vendaQtd').value||1))):1;valorAtualNum=Number(x?.valor||0)*qtd;document.getElementById('itemValor').textContent=money(valorAtualNum);document.getElementById('vendaEstoqueInfo').textContent=tipoAtual==='venda'&&x?`Disponível: ${Number(x.estoque||0)} unidade(s) · Custo médio: ${money(x.custo_medio||0)} por unidade`:'';document.getElementById('payArea').classList.remove('hidden');paymentRows=[];addPaymentRow();renderPayments()}
 const methods=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
-function addPaymentRow(){paymentRows.push({f:'Dinheiro',v:0});renderPayments()}
-function renderPayments(){document.getElementById('paymentRows').innerHTML=paymentRows.map((p,i)=>`<div class="payment-row"><select onchange="paymentRows[${i}].f=this.value">${methods.map(m=>`<option ${m===p.f?'selected':''}>${m}</option>`).join('')}</select><input type="number" step="0.01" value="${p.v||''}" oninput="paymentRows[${i}].v=Number(this.value||0);sumPayments()"><button class="danger" onclick="paymentRows.splice(${i},1);renderPayments()">X</button></div>`).join('');sumPayments()}
+function addPaymentRow(){paymentRows.push({f:'Dinheiro',v:0,n:1});renderPayments()}
+function renderPayments(){document.getElementById('paymentRows').innerHTML=paymentRows.map((p,i)=>`<div class="payment-row" style="grid-template-columns:1fr 130px ${p.f==='Crédito parcelado'?'110px ':''}auto"><select onchange="paymentRows[${i}].f=this.value;renderPayments()">${methods.map(m=>`<option ${m===p.f?'selected':''}>${m}</option>`).join('')}</select><input aria-label="Valor nesta forma" type="number" step="0.01" value="${p.v||''}" placeholder="Valor R$" oninput="paymentRows[${i}].v=Number(this.value||0);sumPayments()">${p.f==='Crédito parcelado'?`<input aria-label="Quantidade de parcelas" type="number" min="1" max="48" value="${p.n||1}" title="Quantidade de parcelas" onchange="paymentRows[${i}].n=Math.max(1,Math.min(48,Number(this.value||1)))" placeholder="Parcelas">`:''}<button class="danger" onclick="paymentRows.splice(${i},1);renderPayments()">X</button></div>`).join('');sumPayments()}
 function sumPayments(){let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0),r=valorAtualNum-paid;document.getElementById('payTotal').textContent=money(valorAtualNum);document.getElementById('payPaid').textContent=money(paid);document.getElementById('payRest').textContent=money(Math.max(r,0));document.getElementById('payStatus').textContent=Math.abs(r)<.005?'✓ Pagamento completo':r>0?'Falta '+money(r):'Valor acima do total';document.getElementById('payStatus').className=Math.abs(r)<.005?'ok':r>0?'warn':'error'}
+function addMonthsISO(dateStr, months){const d=new Date(dateStr+'T12:00:00');const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+months);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDaysISO(dateStr, days){const d=new Date(dateStr+'T12:00:00');d.setDate(d.getDate()+days);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function planDueDate(planName, start){const n=String(planName||'').toLowerCase();if(n.includes('diária')||n.includes('diaria'))return addDaysISO(start,1);if(n.includes('semanal'))return addDaysISO(start,7);if(n.includes('quinzenal'))return addDaysISO(start,15);if(n.includes('trimestral'))return addMonthsISO(start,3);if(n.includes('semestral'))return addMonthsISO(start,6);if(n.includes('anual'))return addMonthsISO(start,12);return addMonthsISO(start,1)}
+
 async function registrarPagamento(){
- if(!alunoAtendimento)return;let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0);if(Math.abs(paid-valorAtualNum)>.005){alert('O pagamento precisa fechar exatamente o valor total.');return}
+ if(!alunoAtendimento)return;
+ let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0);
+ if(Math.abs(paid-valorAtualNum)>.005){alert('O pagamento precisa fechar exatamente o valor total.');return}
+ if(paymentRows.some(x=>x.f==='Crédito parcelado' && (!Number.isInteger(Number(x.n))||Number(x.n)<1||Number(x.n)>48))){alert('Informe de 1 a 48 parcelas para Crédito parcelado.');return}
  let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv,id=Number(document.getElementById('itemSelect').value),item=arr.find(x=>x.id===id);
  const descricao=item?.nome||'', tipo=tipoAtual==='mensalidade'?'mensalidade':tipoAtual==='venda'?'venda':'avaliacao';
  const data=document.getElementById('pData').value||localDate();
+ if(tipoAtual==='venda' && item){const qtd=Math.max(1,Math.floor(Number(document.getElementById('vendaQtd').value||1)));const atual=produtos.find(x=>Number(x.id)===Number(item.id));if(!atual||Number(atual.estoque||0)<qtd){alert('Estoque insuficiente. A venda foi bloqueada. Registre uma compra ou ajuste o estoque antes de continuar.');return}}
+ let novoVencimento=null;
+ if(tipoAtual==='mensalidade' && item && !/taxa de matrícula|taxa de matricula/i.test(item.nome)){
+   const atual=alunoAtendimento.vencimento_plano;
+   if(atual && data>atual){
+     const opc=prompt(`O plano está vencido desde ${atual}.
+Digite 1 para contar a partir da data do pagamento (${data}).
+Digite 2 para manter o vencimento original (${atual}).
+Digite 0 para cancelar.`, '1');
+     if(opc===null||opc==='0')return;
+     if(opc!=='1'&&opc!=='2'){alert('Opção inválida. Pagamento cancelado.');return}
+     novoVencimento=planDueDate(item.nome,opc==='1'?data:atual);
+   }else novoVencimento=planDueDate(item.nome,data);
+ }
  const r=await sb.from('Pagamentos').insert({aluno_codigo:alunoAtendimento.codigo,tipo,descricao,valor_total:valorAtualNum,data_pagamento:data}).select('id').single();
  if(r.error){alert('Erro ao registrar pagamento: '+r.error.message);return}
  const formas=paymentRows.map(x=>({pagamento_id:r.data.id,forma_pagamento:x.f,valor:Number(x.v)}));
  const f=await sb.from('pagamento_formas').insert(formas);if(f.error){alert('Pagamento criado, mas houve erro nas formas: '+f.error.message);return}
- document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';paymentRows=[];document.getElementById('payArea').classList.add('hidden');updateDashboard();
+ if(tipoAtual==='venda' && item){
+   const qtd=Math.max(1,Math.floor(Number(document.getElementById('vendaQtd').value||1)));
+   const atual=produtos.find(x=>Number(x.id)===Number(item.id));
+   const custo=Number(atual?.custo_medio||0);
+   const upd=await sb.from('Produtos').update({estoque:Number(atual?.estoque||0)-qtd}).eq('id',item.id).gte('estoque',qtd).select('id').maybeSingle();
+   if(upd.error||!upd.data){alert('O pagamento foi registrado, mas não foi possível confirmar a baixa de estoque. Confira o estoque antes de fazer outra venda. '+(upd.error?.message||''));return}
+   const mov=await sb.from('movimentos_estoque').insert({produto_id:item.id,tipo:'Venda',quantidade:-qtd,custo_unitario:custo,valor_unitario:Number(item.valor||0),data_movimento:data,referencia:'Pagamento #'+r.data.id,fornecedor:null,pagamento_id:r.data.id});
+   if(mov.error){alert('Venda registrada, mas houve erro ao salvar o movimento de estoque: '+mov.error.message);return}
+ }
+ // Registrar previsão de parcelas do cartão, uma linha por parcela.
+ const parcelas=[];
+ for(const x of paymentRows.filter(x=>x.f==='Crédito parcelado')){
+   const n=Number(x.n||1), cents=Math.round(Number(x.v)*100), base=Math.floor(cents/n), resto=cents-base*n;
+   for(let i=0;i<n;i++)parcelas.push({pagamento_id:r.data.id,aluno_codigo:alunoAtendimento.codigo,numero_parcela:i+1,total_parcelas:n,valor:Number((base+(i<resto?1:0))/100),data_prevista:addMonthsISO(data,i),status:'Prevista'});
+ }
+ if(parcelas.length){const pr=await sb.from('parcelas_credito').insert(parcelas);if(pr.error){alert('Pagamento salvo, mas não foi possível salvar a previsão das parcelas. Execute primeiro o SQL de preparação e depois registre a previsão deste pagamento. Erro: '+pr.error.message);return}}
+ if(tipoAtual==='mensalidade' && item && /taxa de matrícula|taxa de matricula/i.test(item.nome)){
+   const ur=await sb.from('Alunos').update({taxa_matricula_status:'Já paga',taxa_matricula_paga:true}).eq('codigo',alunoAtendimento.codigo);
+   if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o status da taxa de matrícula: '+ur.error.message);return}
+ }
+ if(novoVencimento){const ur=await sb.from('Alunos').update({plano_atual:item.nome,vencimento_plano:novoVencimento}).eq('codigo',alunoAtendimento.codigo);if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o vencimento do plano: '+ur.error.message);return}alunoAtendimento.vencimento_plano=novoVencimento;alunoAtendimento.plano_atual=item.nome;}
+ document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';paymentRows=[];document.getElementById('payArea').classList.add('hidden');await loadAll();updateDashboard();
 }
 async function atualizarGymInfo(){
  const data=document.getElementById('pData').value||localDate(), month=data.slice(0,7);
@@ -305,7 +360,20 @@ async function addPlano(){let nome=document.getElementById('plNome').value.trim(
 async function addProduto(){let nome=document.getElementById('prNome').value.trim(),valor=val('prValor');if(!nome)return;let r=await sb.from('Produtos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('prNome').value='';document.getElementById('prValor').value='';await loadAll()}
 async function addTipoAvaliacao(){let nome=document.getElementById('avNome').value.trim(),valor=val('avValor');if(!nome)return;let r=await sb.from('tipos_avaliacao').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('avNome').value='';document.getElementById('avValor').value='';await loadAll()}
 function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
-function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
+function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button></td></tr>`).join('')}
+async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML=produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')||'<option value="">Cadastre um produto primeiro</option>';}
+async function registrarCompraEstoque(){
+ const produtoId=Number(document.getElementById('compProduto').value),qtd=Math.floor(Number(document.getElementById('compQtd').value||0)),custo=Number(document.getElementById('compCusto').value||0),data=document.getElementById('compData').value||localDate(),fornecedor=document.getElementById('compFornecedor').value.trim();
+ const p=produtos.find(x=>Number(x.id)===produtoId);if(!p){alert('Selecione um produto.');return}if(!Number.isInteger(qtd)||qtd<1||!Number.isFinite(custo)||custo<=0){alert('Informe quantidade inteira maior que zero e custo unitário maior que zero.');return}
+ const estoqueAtual=Number(p.estoque||0),custoAtual=Number(p.custo_medio||0),novoEstoque=estoqueAtual+qtd,novoCusto=((estoqueAtual*custoAtual)+(qtd*custo))/novoEstoque;
+ const ins=await sb.from('compras_estoque').insert({produto_id:produtoId,quantidade:qtd,custo_unitario:custo,total_compra:Number((qtd*custo).toFixed(2)),data_compra:data,fornecedor:fornecedor||null}).select('id').single();if(ins.error){document.getElementById('compMsg').textContent='Erro ao registrar compra: '+ins.error.message;return}
+ const upd=await sb.from('Produtos').update({estoque:novoEstoque,custo_medio:Number(novoCusto.toFixed(4))}).eq('id',produtoId);if(upd.error){document.getElementById('compMsg').textContent='Compra gravada, mas o estoque não foi atualizado: '+upd.error.message;return}
+ const mov=await sb.from('movimentos_estoque').insert({produto_id:produtoId,tipo:'Compra',quantidade:qtd,custo_unitario:custo,valor_unitario:Number(p.valor||0),data_movimento:data,referencia:'Compra #'+ins.data.id,fornecedor:fornecedor||null,pagamento_id:null});
+ document.getElementById('compMsg').textContent=mov.error?'Compra registrada e estoque atualizado, mas falhou o histórico de movimentação: '+mov.error.message:'Compra registrada! Estoque atualizado para '+novoEstoque+' unidade(s). Total da compra: '+money(qtd*custo)+'.';
+ document.getElementById('compQtd').value=1;document.getElementById('compCusto').value='';document.getElementById('compFornecedor').value='';await loadAll();
+}
+async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="6">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${esc(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td></tr>`}).join('')||'<tr><td colspan="6">Nenhuma compra registrada.</td></tr>'}
+
 function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
 async function editarCatalogo(table,id,nome,valor,ativo){let n=prompt('Nome:',nome);if(n===null)return;let v=prompt('Valor:',valor);if(v===null)return;let a=confirm('Deixar ativo?');let r=await sb.from(table).update({nome:n,valor:Number(v),ativo:a}).eq('id',id);if(r.error)alert(r.error.message);else loadAll()}
 
@@ -326,10 +394,15 @@ async function gerarRelatorio(){
  const payments=p.data||[];let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
  let total=payments.reduce((s,x)=>s+Number(x.valor_total||0),0),mens=payments.filter(x=>x.tipo==='mensalidade').reduce((s,x)=>s+Number(x.valor_total||0),0),vendas=payments.filter(x=>x.tipo==='venda').reduce((s,x)=>s+Number(x.valor_total||0),0),avs=payments.filter(x=>x.tipo==='avaliacao').reduce((s,x)=>s+Number(x.valor_total||0),0);
  document.getElementById('rTotal').textContent=money(total);document.getElementById('rMens').textContent=money(mens);document.getElementById('rVendas').textContent=money(vendas);document.getElementById('rAv').textContent=money(avs);
+ const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
+ const mv=await sb.from('movimentos_estoque').select('quantidade,custo_unitario,valor_unitario,tipo,data_movimento').eq('tipo','Venda').gte('data_movimento',start).lte('data_movimento',end);const custoVendido=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.custo_unitario||0),0);
+ document.getElementById('rCompras').textContent=money(compraTotal);document.getElementById('rCustoVendas').textContent=money(custoVendido);const receitaEstoque=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.valor_unitario||0),0);document.getElementById('rLucroBruto').textContent=money(receitaEstoque-custoVendido);
  let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
  document.getElementById('rList').innerHTML=payments.map(x=>`<tr><td>${x.data_pagamento}</td><td>${esc(x.aluno_codigo)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(f.forma_pagamento)+' '+money(f.valor)).join(' + ')}</td></tr>`).join('');
+ const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');const parcelas=pr.data||[];document.getElementById('rParcelasSummary').textContent=`${parcelas.length} parcela(s) previstas neste período — ${money(parcelas.filter(x=>x.status!=='Recebida').reduce((s,x)=>s+Number(x.valor||0),0))} ainda prevista(s).`;document.getElementById('rParcelasList').innerHTML=parcelas.map(x=>`<tr><td>${esc(x.data_prevista)}</td><td>${esc(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td><td>${esc(x.status)}</td><td>${x.status==='Recebida'? '—':`<button class="secondary" onclick="marcarParcelaRecebida(${x.id})">Marcar recebida</button>`}</td></tr>`).join('');
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
 }
+async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
 initSupabase();
 </script>
 </body>
