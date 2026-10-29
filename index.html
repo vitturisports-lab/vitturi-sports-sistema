@@ -359,8 +359,8 @@ async function registrarGym(){if(!alunoAtendimento||!window.gymTemp)return;let t
 async function addPlano(){let nome=document.getElementById('plNome').value.trim(),valor=val('plValor');if(!nome)return;let r=await sb.from('Planos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('plNome').value='';document.getElementById('plValor').value='';await loadAll()}
 async function addProduto(){let nome=document.getElementById('prNome').value.trim(),valor=val('prValor');if(!nome)return;let r=await sb.from('Produtos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('prNome').value='';document.getElementById('prValor').value='';await loadAll()}
 async function addTipoAvaliacao(){let nome=document.getElementById('avNome').value.trim(),valor=val('avValor');if(!nome)return;let r=await sb.from('tipos_avaliacao').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('avNome').value='';document.getElementById('avValor').value='';await loadAll()}
-function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
-function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button></td></tr>`).join('')}
+function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('Planos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
+function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button> <button class="danger" onclick="excluirCatalogo('Produtos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML=produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')||'<option value="">Cadastre um produto primeiro</option>';}
 async function registrarCompraEstoque(){
  const produtoId=Number(document.getElementById('compProduto').value),qtd=Math.floor(Number(document.getElementById('compQtd').value||0)),custo=Number(document.getElementById('compCusto').value||0),data=document.getElementById('compData').value||localDate(),fornecedor=document.getElementById('compFornecedor').value.trim();
@@ -374,8 +374,62 @@ async function registrarCompraEstoque(){
 }
 async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="6">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${esc(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td></tr>`}).join('')||'<tr><td colspan="6">Nenhuma compra registrada.</td></tr>'}
 
-function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button></td></tr>`).join('')}
-async function editarCatalogo(table,id,nome,valor,ativo){let n=prompt('Nome:',nome);if(n===null)return;let v=prompt('Valor:',valor);if(v===null)return;let a=confirm('Deixar ativo?');let r=await sb.from(table).update({nome:n,valor:Number(v),ativo:a}).eq('id',id);if(r.error)alert(r.error.message);else loadAll()}
+function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
+async function confirmarSenhaAdministrador(){
+  if(!user||!user.email){alert('Não foi possível identificar o usuário conectado. Entre novamente no sistema.');return false}
+  const senha=prompt('Confirme sua senha de acesso para autorizar esta operação:');
+  if(senha===null)return false;
+  if(!senha){alert('A senha é obrigatória. Operação cancelada.');return false}
+  const ver=await sb.auth.signInWithPassword({email:user.email,password:senha});
+  if(ver.error){alert('Senha não confirmada. Operação cancelada.');return false}
+  user=ver.data.user||user;
+  return true;
+}
+async function editarCatalogo(table,id,nome,valor,ativo){
+  const n=prompt('Nome:',nome);if(n===null)return;
+  if(!n.trim()){alert('Informe um nome.');return}
+  const v=prompt('Valor (R$):',valor);if(v===null)return;
+  if(!Number.isFinite(Number(v))||Number(v)<0){alert('Informe um valor válido.');return}
+  if(!confirm(`Confirma alterar "${nome}" para "${n.trim()}" e o valor para ${money(Number(v))}?`))return;
+  if(!await confirmarSenhaAdministrador())return;
+  const a=confirm('Deseja deixar este item ATIVO?\n\nOK = ativo\nCancelar = inativo');
+  const r=await sb.from(table).update({nome:n.trim(),valor:Number(v),ativo:a}).eq('id',id);
+  if(r.error)alert('Não foi possível salvar: '+r.error.message);else{alert('Cadastro atualizado com sucesso.');await loadAll()}
+}
+async function excluirCatalogo(table,id,nome){
+  if(!confirm(`Tem certeza de que deseja excluir/desativar "${nome}"?\n\nSe houver histórico de uso, o item será apenas desativado para preservar os registros financeiros.`))return;
+  if(!await confirmarSenhaAdministrador())return;
+  let temHistorico=false, erroHistorico=null;
+  if(table==='Produtos'){
+    const [c,m,p]=await Promise.all([
+      sb.from('compras_estoque').select('id',{head:true,count:'exact'}).eq('produto_id',id),
+      sb.from('movimentos_estoque').select('id',{head:true,count:'exact'}).eq('produto_id',id),
+      sb.from('Pagamentos').select('id',{head:true,count:'exact'}).eq('descricao',nome)
+    ]);
+    erroHistorico=c.error||m.error||p.error;
+    temHistorico=(c.count||0)>0||(m.count||0)>0||(p.count||0)>0;
+  } else {
+    const [p,a]=await Promise.all([
+      sb.from('Pagamentos').select('id',{head:true,count:'exact'}).eq('descricao',nome),
+      table==='Planos'?sb.from('Alunos').select('codigo',{head:true,count:'exact'}).eq('plano_atual',nome):Promise.resolve({count:0,error:null})
+    ]);
+    erroHistorico=p.error||a.error;
+    temHistorico=(p.count||0)>0||(a.count||0)>0;
+  }
+  if(erroHistorico){alert('Não foi possível verificar o histórico. Por segurança, o item não foi excluído. Detalhe: '+erroHistorico.message);return}
+  let r;
+  if(temHistorico){
+    r=await sb.from(table).update({ativo:false}).eq('id',id);
+    if(!r.error)alert(`"${nome}" possui histórico e foi desativado. Ele não aparecerá para novos lançamentos, e os registros antigos serão preservados.`);
+  }else{
+    if(!confirm(`Não foi encontrado histórico para "${nome}". Confirma a EXCLUSÃO DEFINITIVA? Esta ação não pode ser desfeita.`))return;
+    if(!await confirmarSenhaAdministrador())return;
+    r=await sb.from(table).delete().eq('id',id);
+    if(!r.error)alert(`"${nome}" foi excluído.`);
+  }
+  if(r.error){alert('Não foi possível concluir a operação: '+r.error.message);return}
+  await loadAll();
+}
 
 async function loadGymConfig(){let r=await sb.from('gympass_config').select('*').eq('ativo',true).limit(1).maybeSingle();if(r.data){document.getElementById('g15').value=r.data.valor_ate_15;document.getElementById('g16').value=r.data.valor_a_partir_16}}
 async function salvarGymConfig(){let r=await sb.from('gympass_config').update({valor_ate_15:val('g15'),valor_a_partir_16:val('g16')}).eq('ativo',true);document.getElementById('admMsg').textContent=r.error?'Erro: '+r.error.message:'Configuração GymPass salva com sucesso.'}
