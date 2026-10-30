@@ -113,7 +113,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="fichaOverlay" class="ficha-overlay hidden" role="dialog" aria-modal="true" aria-label="Ficha do aluno" onclick="if(event.target===this)fecharFichaAluno()">
 <div class="ficha-card">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Ficha do aluno</h2><button class="secondary" onclick="fecharFichaAluno()">Fechar ✕</button></div>
-<div id="fichaConteudo" class="ficha-grid"></div>
+<div id="fichaConteudo" class="ficha-grid"></div><h3>Histórico de retornos</h3><div id="fichaRetornos" class="muted">Carregando...</div>
 <p class="muted">Consulta somente para visualização. Para alterar informações, utilize o botão Editar.</p>
 </div></div>
 <section id="pagamento" class="tab">
@@ -289,7 +289,7 @@ function visualizarAlunoPorIndice(i){
  ['Código',a.codigo],['Nome',a.nome],['CPF',a.cpf],['Data de nascimento',formatarDataFicha(a.data_nascimento)],
  ['Gênero',a.genero],['Telefone',a.telefone],['Data de cadastro',formatarDataFicha(a.data_cadastro)],
  ['Taxa de matrícula',a.taxa_matricula_status||(a.taxa_matricula_paga===true?'Já paga':'Pendente')],
- ['Plano atual',a.plano_atual||'Sem plano'],['Status',a.status],
+ ['Plano atual',a.plano_atual||'Sem plano'],['Vencimento do plano',dataBR(a.vencimento_plano)],['Status',a.status],
  ['Tipo de pessoa',a.tipo_pessoa||'Aluno'],['Categoria do aluno',(a.tipo_pessoa||'Aluno')==='Aluno'?(a.categoria_aluno||'Não informada'):'Não se aplica']
  ];
  const root=document.getElementById('fichaConteudo');root.replaceChildren();
@@ -300,8 +300,15 @@ function visualizarAlunoPorIndice(i){
   box.append(label,dado);root.appendChild(box);
  }
  document.getElementById('fichaOverlay').classList.remove('hidden');
+ carregarRetornosAluno(a.codigo);
 }
-function formatarDataFicha(v){if(!v)return '';const m=String(v).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:v}
+function formatarDataFicha(v){return v?dataBR(v):''}
+async function carregarRetornosAluno(codigo){
+ const el=document.getElementById('fichaRetornos');el.textContent='Carregando...';
+ const {data,error}=await sb.from('retornos_alunos').select('data_retorno,plano_novo,vencimento_anterior,vencimento_novo,pagamento_id').eq('aluno_codigo',codigo).order('data_retorno',{ascending:false});
+ if(error){el.textContent='Histórico indisponível. Verifique se a tabela retornos_alunos foi criada no Supabase.';return}
+ el.innerHTML=(data||[]).length?'<div style="overflow:auto"><table><thead><tr><th>Retorno</th><th>Novo plano</th><th>Vencimento anterior</th><th>Novo vencimento</th></tr></thead><tbody>'+(data||[]).map(x=>`<tr><td>${dataBR(x.data_retorno)}</td><td>${esc(x.plano_novo)}</td><td>${dataBR(x.vencimento_anterior)}</td><td>${dataBR(x.vencimento_novo)}</td></tr>`).join('')+'</tbody></table></div>':'Nenhum retorno registrado.';
+}
 function fecharFichaAluno(){document.getElementById('fichaOverlay').classList.add('hidden')}
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value=''}
 function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTaxaStatus').value='Pendente';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';atualizarCategoriaAluno()}
@@ -348,21 +355,27 @@ async function registrarPagamento(){
  const descricao=item?.nome||'', tipo=tipoAtual==='mensalidade'?'mensalidade':tipoAtual==='venda'?'venda':'avaliacao';
  const data=document.getElementById('pData').value||localDate();
  if(tipoAtual==='venda' && item){const qtd=Math.max(1,Math.floor(Number(document.getElementById('vendaQtd').value||1)));const atual=produtos.find(x=>Number(x.id)===Number(item.id));if(!atual||Number(atual.estoque||0)<qtd){alert('Estoque insuficiente. A venda foi bloqueada. Registre uma compra ou ajuste o estoque antes de continuar.');return}}
- let novoVencimento=null;
+ let novoVencimento=null, registrarRetorno=false, vencimentoAnterior=null;
  if(tipoAtual==='mensalidade' && item && !/taxa de matrícula|taxa de matricula/i.test(item.nome)){
    const atual=alunoAtendimento.vencimento_plano;
+   vencimentoAnterior=atual||null;
    let base=data;
    if(atual){
      const atraso=Math.round((new Date(data+'T12:00:00')-new Date(atual+'T12:00:00'))/86400000);
      if(atraso<=5){base=atual}
      else{
-       const opc=prompt(`O plano venceu em ${dataBR(atual)} (atraso de ${atraso} dias).\n\n1 — Manter vencimento anterior\n2 — Reiniciar a partir do pagamento (${dataBR(data)})\n0 — Cancelar`, '1');
+       const opc=prompt(`O plano venceu em ${dataBR(atual)} (atraso de ${atraso} dias).\n\n1 — Renovar mantendo vencimento anterior\n2 — Renovar com nova data (sem registrar retorno)\n3 — Registrar RETORNO do aluno (nova data e histórico)\n0 — Cancelar`, '1');
        if(opc===null||opc==='0')return;
-       if(opc!=='1'&&opc!=='2'){alert('Opção inválida. Pagamento cancelado.');return}
+       if(!['1','2','3'].includes(opc)){alert('Opção inválida. Pagamento cancelado.');return}
        base=opc==='1'?atual:data;
+       registrarRetorno=opc==='3';
      }
    }
    novoVencimento=planDueDate(item.nome,base);
+ }
+ if(registrarRetorno){
+   const teste=await sb.from('retornos_alunos').select('id').limit(1);
+   if(teste.error){alert('Antes de registrar um retorno, crie a tabela retornos_alunos no Supabase usando o SQL fornecido. Nenhum pagamento foi lançado. Detalhe: '+teste.error.message);return}
  }
  const r=await sb.from('Pagamentos').insert({aluno_codigo:alunoAtendimento.codigo,tipo,descricao,valor_total:valorAtualNum,data_pagamento:data}).select('id').single();
  if(r.error){alert('Erro ao registrar pagamento: '+r.error.message);return}
@@ -389,6 +402,10 @@ async function registrarPagamento(){
    if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o status da taxa de matrícula: '+ur.error.message);return}
  }
  if(novoVencimento){const ur=await sb.from('Alunos').update({plano_atual:item.nome,vencimento_plano:novoVencimento}).eq('codigo',alunoAtendimento.codigo);if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o vencimento do plano: '+ur.error.message);return}alunoAtendimento.vencimento_plano=novoVencimento;alunoAtendimento.plano_atual=item.nome;}
+ if(registrarRetorno){
+   const hist=await sb.from('retornos_alunos').insert({aluno_codigo:alunoAtendimento.codigo,data_retorno:data,plano_novo:item.nome,vencimento_anterior:vencimentoAnterior,vencimento_novo:novoVencimento,pagamento_id:r.data.id});
+   if(hist.error){alert('O pagamento e o novo vencimento foram salvos, mas o histórico de retorno NÃO foi registrado. Anote o pagamento #'+r.data.id+' e não repita o pagamento. Erro: '+hist.error.message);return}
+ }
  document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';paymentRows=[];document.getElementById('payArea').classList.add('hidden');await loadAll();updateDashboard();
 }
 async function atualizarGymInfo(){
