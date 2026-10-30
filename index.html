@@ -64,7 +64,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <button onclick="aba('alunos',this)">Alunos</button>
 <button onclick="aba('pagamento',this)">Atendimento</button>
 <button onclick="aba('planos',this)">Planos</button>
-<button onclick="aba('vendas',this)">Vendas (suplementos / bebidas)</button>
+<button onclick="aba('vendas',this)">Vendas (Suplementos / Bebidas)</button>
 <button onclick="aba('avaliacoes',this)">Avaliações</button>
 <button onclick="aba('relatorios',this)">Relatórios</button>
 <button onclick="aba('admin',this)">Administração</button>
@@ -117,7 +117,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <p class="muted">Consulta somente para visualização. Para alterar informações, utilize o botão Editar.</p>
 </div></div>
 <section id="pagamento" class="tab">
-<div class="box"><h2>Atendimento / lançamento rápido</h2>
+<div class="box"><h2>Atendimento / Lançamento Rápido</h2>
 <div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label>Data</label><input id="pData" type="date"></div></div>
 <div id="pAluno" class="result hidden"></div>
 <div id="operacoes" class="hidden"><h3>O que o aluno está pagando?</h3>
@@ -155,12 +155,12 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
 <section id="vendas" class="tab">
-<div class="box"><h2>Vendas (suplementos / bebidas)</h2>
+<div class="box"><h2>Vendas (Suplementos / Bebidas)</h2>
 <div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Preço de venda (R$)</label><input id="prValor" type="number" step="0.01" min="0"></div></div><br>
 <button class="primary" onclick="addProduto()">ADICIONAR PRODUTO</button>
 <p class="muted">O preço de venda pode ser alterado sem apagar o histórico de compras e vendas.</p>
 <div style="overflow:auto"><table><thead><tr><th>ID</th><th>Produto</th><th>Preço de venda</th><th>Estoque</th><th>Custo médio</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaProdutos"></tbody></table></div></div>
-<div class="box"><h2>Registrar compra / entrada no estoque</h2>
+<div class="box"><h2>Registrar Compra / Entrada no Estoque</h2>
 <p class="muted">Registre cada compra separadamente. Se o fornecedor ou o custo mudar, basta lançar uma nova compra.</p>
 <div class="grid"><div><label>Produto</label><select id="compProduto"></select></div><div><label>Quantidade comprada</label><input id="compQtd" type="number" min="1" step="1" value="1"></div><div><label>Custo por unidade (R$)</label><input id="compCusto" type="number" min="0.01" step="0.01"></div><div><label>Data da compra</label><input id="compData" type="date"></div><div><label>Fornecedor</label><input id="compFornecedor" placeholder="Nome do fornecedor"></div></div><br>
 <button class="primary" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button><div id="compMsg" class="status"></div></div>
@@ -173,15 +173,15 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>ID</th><th>Avaliação</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaAvaliacoes"></tbody></table></div></section>
 
 <section id="relatorios" class="tab"><div class="box"><h2>Relatórios</h2>
-<div class="grid"><div><label>Período</label><select id="rPeriodo" onchange="toggleCustom();gerarRelatorio()"><option value="today">Hoje</option><option value="month">Mês atual</option><option value="custom">Período personalizado</option></select></div>
-<div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
+<div class="grid"><div><label>Período</label><select id="rPeriodo" onchange="toggleCustom();gerarRelatorio()"><option value="today">Hoje</option><option value="month">Mês atual</option><option value="custom">Período personalizado</option><option value="specific_month">Mês específico</option></select></div>
+<div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" onchange="gerarRelatorio()"></div><div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
 <div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
 <div class="cards" style="margin-top:14px"><div class="card"><small>Total recebido</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
 <div class="cards" style="margin-top:12px"><div class="card"><small>Compras de estoque no período</small><b id="rCompras">R$ 0,00</b></div><div class="card"><small>Custo dos produtos vendidos</small><b id="rCustoVendas">R$ 0,00</b></div><div class="card"><small>Lucro bruto estimado (vendas com estoque)</small><b id="rLucroBruto">R$ 0,00</b></div><div class="card"><small>Observação</small><div class="muted" style="margin-top:8px">Não inclui aluguel, salários ou outras despesas.</div></div></div>
 <h3>Formas de pagamento</h3><div id="rMethods" class="muted"></div>
 <h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody id="rList"></tbody></table></div>
 <h3>Previsão de parcelas de crédito</h3><p class="muted">Previsão financeira; a data real de repasse depende da operadora do cartão.</p><div id="rParcelasSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Vencimento previsto</th><th>Aluno</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody id="rParcelasList"></tbody></table></div>
-<h3>GymPass</h3><div id="rGymSummary" class="muted"></div>
+<h3>GymPass</h3><div id="rGymSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Check-in do mês</th><th>Valor</th></tr></thead><tbody id="rGymList"></tbody></table></div>
 </div></section>
 
 <section id="admin" class="tab"><div class="box"><h2>Configurações</h2>
@@ -196,6 +196,9 @@ const PROJECT_URL='https://gymiroswckbotsjscdzc.supabase.co';
 let sb=null, user=null, alunos=[], planos=[], produtos=[], tiposAv=[];
 let alunoAtendimento=null, tipoAtual='', valorAtualNum=0, paymentRows=[];
 
+const dataBR=v=>{if(!v)return '—';const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:String(v)};
+const tipoBR=t=>({mensalidade:'Mensalidade',venda:'Venda',avaliacao:'Avaliação',gympass:'GymPass'})[String(t||'').toLowerCase()]||t;
+const formaBR=f=>String(f||'').replace(/^PIX\b/i,'Pix').replace(/^Crédito parcelado$/i,'Crédito Parcelado');
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const localDate=()=>{let d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -272,7 +275,7 @@ async function loadAll(){
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
  fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
 }
-async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate()}
+async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7)}
 
 function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
 function renderAlunos(){
@@ -313,7 +316,7 @@ async function salvarAluno(){
  document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
 }
 
-function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Taxa de matrícula: ${esc(alunoAtendimento.taxa_matricula_status|| (alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente'))}<br>Vencimento do plano: ${esc(alunoAtendimento.vencimento_plano||'Não definido')}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
+function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Taxa de matrícula: ${esc(alunoAtendimento.taxa_matricula_status|| (alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente'))}<br>Vencimento do plano: ${dataBR(alunoAtendimento.vencimento_plano)}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
 async function tipoAtendimento(t){
  tipoAtual=t;document.getElementById('itemArea').classList.add('hidden');document.getElementById('gymArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');
  if(t==='gympass'){await atualizarGymInfo();return}
@@ -325,7 +328,11 @@ async function tipoAtendimento(t){
 }
 function atualizarValor(){let sel=document.getElementById('itemSelect');let id=Number(sel.value);let arr=tipoAtual==='mensalidade'?planos:tipoAtual==='venda'?produtos:tiposAv;let x=arr.find(a=>a.id===id);let qtd=tipoAtual==='venda'?Math.max(1,Math.floor(Number(document.getElementById('vendaQtd').value||1))):1;valorAtualNum=Number(x?.valor||0)*qtd;document.getElementById('itemValor').textContent=money(valorAtualNum);document.getElementById('vendaEstoqueInfo').textContent=tipoAtual==='venda'&&x?`Disponível: ${Number(x.estoque||0)} unidade(s) · Custo médio: ${money(x.custo_medio||0)} por unidade`:'';document.getElementById('payArea').classList.remove('hidden');paymentRows=[];addPaymentRow();renderPayments()}
 const methods=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
-function addPaymentRow(){paymentRows.push({f:'Dinheiro',v:0,n:1});renderPayments()}
+function addPaymentRow(){
+ const restante=Math.max(0,Math.round((valorAtualNum-paymentRows.reduce((a,x)=>a+Number(x.v||0),0))*100)/100);
+ paymentRows.push({f:'Dinheiro',v:restante,n:1});
+ renderPayments();
+}
 function renderPayments(){document.getElementById('paymentRows').innerHTML=paymentRows.map((p,i)=>`<div class="payment-row" style="grid-template-columns:1fr 130px ${p.f==='Crédito parcelado'?'110px ':''}auto"><select onchange="paymentRows[${i}].f=this.value;renderPayments()">${methods.map(m=>`<option ${m===p.f?'selected':''}>${m}</option>`).join('')}</select><input aria-label="Valor nesta forma" type="number" step="0.01" value="${p.v||''}" placeholder="Valor R$" oninput="paymentRows[${i}].v=Number(this.value||0);sumPayments()">${p.f==='Crédito parcelado'?`<input aria-label="Quantidade de parcelas" type="number" min="1" max="48" value="${p.n||1}" title="Quantidade de parcelas" onchange="paymentRows[${i}].n=Math.max(1,Math.min(48,Number(this.value||1)))" placeholder="Parcelas">`:''}<button class="danger" onclick="paymentRows.splice(${i},1);renderPayments()">X</button></div>`).join('');sumPayments()}
 function sumPayments(){let paid=paymentRows.reduce((s,x)=>s+Number(x.v||0),0),r=valorAtualNum-paid;document.getElementById('payTotal').textContent=money(valorAtualNum);document.getElementById('payPaid').textContent=money(paid);document.getElementById('payRest').textContent=money(Math.max(r,0));document.getElementById('payStatus').textContent=Math.abs(r)<.005?'✓ Pagamento completo':r>0?'Falta '+money(r):'Valor acima do total';document.getElementById('payStatus').className=Math.abs(r)<.005?'ok':r>0?'warn':'error'}
 function addMonthsISO(dateStr, months){const d=new Date(dateStr+'T12:00:00');const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+months);const last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,last));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -344,15 +351,18 @@ async function registrarPagamento(){
  let novoVencimento=null;
  if(tipoAtual==='mensalidade' && item && !/taxa de matrícula|taxa de matricula/i.test(item.nome)){
    const atual=alunoAtendimento.vencimento_plano;
-   if(atual && data>atual){
-     const opc=prompt(`O plano está vencido desde ${atual}.
-Digite 1 para contar a partir da data do pagamento (${data}).
-Digite 2 para manter o vencimento original (${atual}).
-Digite 0 para cancelar.`, '1');
-     if(opc===null||opc==='0')return;
-     if(opc!=='1'&&opc!=='2'){alert('Opção inválida. Pagamento cancelado.');return}
-     novoVencimento=planDueDate(item.nome,opc==='1'?data:atual);
-   }else novoVencimento=planDueDate(item.nome,data);
+   let base=data;
+   if(atual){
+     const atraso=Math.round((new Date(data+'T12:00:00')-new Date(atual+'T12:00:00'))/86400000);
+     if(atraso<=5){base=atual}
+     else{
+       const opc=prompt(`O plano venceu em ${dataBR(atual)} (atraso de ${atraso} dias).\n\n1 — Manter vencimento anterior\n2 — Reiniciar a partir do pagamento (${dataBR(data)})\n0 — Cancelar`, '1');
+       if(opc===null||opc==='0')return;
+       if(opc!=='1'&&opc!=='2'){alert('Opção inválida. Pagamento cancelado.');return}
+       base=opc==='1'?atual:data;
+     }
+   }
+   novoVencimento=planDueDate(item.nome,base);
  }
  const r=await sb.from('Pagamentos').insert({aluno_codigo:alunoAtendimento.codigo,tipo,descricao,valor_total:valorAtualNum,data_pagamento:data}).select('id').single();
  if(r.error){alert('Erro ao registrar pagamento: '+r.error.message);return}
@@ -406,7 +416,7 @@ async function registrarCompraEstoque(){
  document.getElementById('compMsg').textContent=mov.error?'Compra registrada e estoque atualizado, mas falhou o histórico de movimentação: '+mov.error.message:'Compra registrada! Estoque atualizado para '+novoEstoque+' unidade(s). Total da compra: '+money(qtd*custo)+'.';
  document.getElementById('compQtd').value=1;document.getElementById('compCusto').value='';document.getElementById('compFornecedor').value='';await loadAll();
 }
-async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="6">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${esc(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td></tr>`}).join('')||'<tr><td colspan="6">Nenhuma compra registrada.</td></tr>'}
+async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="6">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${dataBR(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td></tr>`}).join('')||'<tr><td colspan="6">Nenhuma compra registrada.</td></tr>'}
 
 function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 async function confirmarSenhaAdministrador(){
@@ -472,11 +482,12 @@ async function updateDashboard(){
  const today=localDate();let [a,p,g]=await Promise.all([sb.from('Alunos').select('codigo',{count:'exact',head:true}),sb.from('Pagamentos').select('valor_total').eq('data_pagamento',today),sb.from('gympass_checkins').select('id',{count:'exact',head:true}).eq('data_checkin',today)]);
  let total=(p.data||[]).reduce((s,x)=>s+Number(x.valor_total||0),0);document.getElementById('dashAlunos').textContent=a.count??0;document.getElementById('dashOps').textContent=(p.data||[]).length;document.getElementById('dashValor').textContent=money(total);document.getElementById('dashGym').textContent=g.count??0;
 }
-function toggleCustom(){let on=document.getElementById('rPeriodo').value==='custom';document.getElementById('rFromBox').classList.toggle('hidden',!on);document.getElementById('rToBox').classList.toggle('hidden',!on)}
+function toggleCustom(){const mode=document.getElementById('rPeriodo').value;document.getElementById('rFromBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rToBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rMonthBox').classList.toggle('hidden',mode!=='specific_month')}
 async function gerarRelatorio(){
  if(!sb)return;let mode=document.getElementById('rPeriodo').value,today=localDate(),start=today,end=today;
  if(mode==='month'){let d=new Date();start=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';end=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10)}
  if(mode==='custom'){start=document.getElementById('rFrom').value;end=document.getElementById('rTo').value}
+ if(mode==='specific_month'){const m=document.getElementById('rMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return;start=m+'-01';end=addMonthsISO(start,1);end=addDaysISO(end,-1)}
  if(!start||!end)return;
  const p=await sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false});
  const payments=p.data||[];let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
@@ -485,10 +496,11 @@ async function gerarRelatorio(){
  const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
  const mv=await sb.from('movimentos_estoque').select('quantidade,custo_unitario,valor_unitario,tipo,data_movimento').eq('tipo','Venda').gte('data_movimento',start).lte('data_movimento',end);const custoVendido=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.custo_unitario||0),0);
  document.getElementById('rCompras').textContent=money(compraTotal);document.getElementById('rCustoVendas').textContent=money(custoVendido);const receitaEstoque=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.valor_unitario||0),0);document.getElementById('rLucroBruto').textContent=money(receitaEstoque-custoVendido);
- let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(k)}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
- document.getElementById('rList').innerHTML=payments.map(x=>`<tr><td>${x.data_pagamento}</td><td>${esc(x.aluno_codigo)}</td><td>${esc(x.tipo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(f.forma_pagamento)+' '+money(f.valor)).join(' + ')}</td></tr>`).join('');
- const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');const parcelas=pr.data||[];document.getElementById('rParcelasSummary').textContent=`${parcelas.length} parcela(s) previstas neste período — ${money(parcelas.filter(x=>x.status!=='Recebida').reduce((s,x)=>s+Number(x.valor||0),0))} ainda prevista(s).`;document.getElementById('rParcelasList').innerHTML=parcelas.map(x=>`<tr><td>${esc(x.data_prevista)}</td><td>${esc(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td><td>${esc(x.status)}</td><td>${x.status==='Recebida'? '—':`<button class="secondary" onclick="marcarParcelaRecebida(${x.id})">Marcar recebida</button>`}</td></tr>`).join('');
+ let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(formaBR(k))}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
+ document.getElementById('rList').innerHTML=payments.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')}</td></tr>`).join('');
+ const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');const parcelas=pr.data||[];document.getElementById('rParcelasSummary').textContent=`${parcelas.length} parcela(s) previstas neste período — ${money(parcelas.filter(x=>x.status!=='Recebida').reduce((s,x)=>s+Number(x.valor||0),0))} ainda prevista(s).`;document.getElementById('rParcelasList').innerHTML=parcelas.map(x=>`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td><td>${esc(x.status)}</td><td>${x.status==='Recebida'? '—':`<button class="secondary" onclick="marcarParcelaRecebida(${x.id})">Marcar recebida</button>`}</td></tr>`).join('');
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
+ document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(x.numero_checkin)}º</td><td>${money(x.valor)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhum check-in no período.</td></tr>';
 }
 async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
 initSupabase();
