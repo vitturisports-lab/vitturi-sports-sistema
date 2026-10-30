@@ -25,6 +25,13 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 .setup{max-width:650px;margin:35px auto}.title{font-size:19px;font-weight:700;margin-bottom:12px}.status{padding:10px;border-radius:7px;margin:10px 0;background:#f5f5f5}
 @media(max-width:850px){.grid,.cards{grid-template-columns:1fr 1fr}.payment-row{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
 @media(max-width:600px){.grid,.cards{grid-template-columns:1fr}table{display:block;overflow-x:auto}}
+
+.ficha-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.ficha-card{background:white;border-radius:12px;padding:24px;width:min(680px,100%);max-height:88vh;overflow:auto}
+.ficha-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ficha-campo{background:#f7f7f7;padding:10px;border-radius:7px;overflow-wrap:anywhere}
+.ficha-campo small{display:block;color:#666;margin-bottom:4px}
+@media(max-width:600px){.ficha-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -103,6 +110,12 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>Código</th><th>Nome</th><th>Plano</th><th>CPF</th><th>Status</th><th>Ação</th></tr></thead><tbody id="listaAlunos"></tbody></table></div>
 </section>
 
+<div id="fichaOverlay" class="ficha-overlay hidden" role="dialog" aria-modal="true" aria-label="Ficha do aluno" onclick="if(event.target===this)fecharFichaAluno()">
+<div class="ficha-card">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Ficha do aluno</h2><button class="secondary" onclick="fecharFichaAluno()">Fechar ✕</button></div>
+<div id="fichaConteudo" class="ficha-grid"></div>
+<p class="muted">Consulta somente para visualização. Para alterar informações, utilize o botão Editar.</p>
+</div></div>
 <section id="pagamento" class="tab">
 <div class="box"><h2>Atendimento / lançamento rápido</h2>
 <div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label>Data</label><input id="pData" type="date"></div></div>
@@ -264,8 +277,29 @@ async function startApp(){document.getElementById('app').classList.remove('hidde
 function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
 function renderAlunos(){
  const q=document.getElementById('buscaAluno').value.toLowerCase();
- document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="editarAluno('${esc(a.codigo)}')">Editar</button></td></tr>`).join('');
+ document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button> <button class="secondary" onclick="editarAlunoPorIndice(${alunos.indexOf(a)})">Editar</button></td></tr>`).join('');
 }
+function editarAlunoPorIndice(i){const a=alunos[i];if(a)editarAluno(a.codigo)}
+function visualizarAlunoPorIndice(i){
+ const a=alunos[i];if(!a)return;
+ const campos=[
+ ['Código',a.codigo],['Nome',a.nome],['CPF',a.cpf],['Data de nascimento',formatarDataFicha(a.data_nascimento)],
+ ['Gênero',a.genero],['Telefone',a.telefone],['Data de cadastro',formatarDataFicha(a.data_cadastro)],
+ ['Taxa de matrícula',a.taxa_matricula_status||(a.taxa_matricula_paga===true?'Já paga':'Pendente')],
+ ['Plano atual',a.plano_atual||'Sem plano'],['Status',a.status],
+ ['Tipo de pessoa',a.tipo_pessoa||'Aluno'],['Categoria do aluno',(a.tipo_pessoa||'Aluno')==='Aluno'?(a.categoria_aluno||'Não informada'):'Não se aplica']
+ ];
+ const root=document.getElementById('fichaConteudo');root.replaceChildren();
+ for(const [rotulo,valor] of campos){
+  const box=document.createElement('div');box.className='ficha-campo';
+  const label=document.createElement('small');label.textContent=rotulo;
+  const dado=document.createElement('strong');dado.textContent=valor===null||valor===undefined||valor===''?'Não informado':String(valor);
+  box.append(label,dado);root.appendChild(box);
+ }
+ document.getElementById('fichaOverlay').classList.remove('hidden');
+}
+function formatarDataFicha(v){if(!v)return '';const m=String(v).match(/^(\\d{4})-(\\d{2})-(\\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:v}
+function fecharFichaAluno(){document.getElementById('fichaOverlay').classList.add('hidden')}
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value=''}
 function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTaxaStatus').value='Pendente';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';atualizarCategoriaAluno()}
 function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=a.cpf||'';document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aStatus').value=a.status||'Ativo';document.getElementById('aTaxaStatus').value=a.taxa_matricula_status||(a.taxa_matricula_paga===true?'Já paga':'Pendente');document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
