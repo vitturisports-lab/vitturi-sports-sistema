@@ -207,8 +207,16 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" onchange="gerarRelatorio()"></div><div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
 <div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
 <div style="margin-top:14px"><label for="rAlunoBusca">Pesquisar pagamentos por código ou nome do aluno</label><input id="rAlunoBusca" placeholder="Digite o código ou nome; deixe vazio para todos" oninput="gerarRelatorio()"><p id="rFiltroInfo" class="muted">Exibindo pagamentos de todos os alunos.</p></div>
- <div class="cards" style="margin-top:14px"><div class="card"><small>Total recebido</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
+ <div class="cards" style="margin-top:14px"><div class="card"><small>Total de pagamentos registrados</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
 <div class="cards" style="margin-top:12px"><div class="card"><small>Compras de estoque no período</small><b id="rCompras">R$ 0,00</b></div><div class="card"><small>Custo dos produtos vendidos</small><b id="rCustoVendas">R$ 0,00</b></div><div class="card"><small>Lucro bruto estimado (vendas com estoque)</small><b id="rLucroBruto">R$ 0,00</b></div><div class="card"><small>Observação</small><div class="muted" style="margin-top:8px">Não inclui aluguel, salários ou outras despesas.</div></div></div>
+<h3>Resumo financeiro — entradas no período</h3>
+<p class="muted">Pagamentos à vista (dinheiro, PIX, débito e crédito à vista) contam na data do lançamento. Crédito parcelado conta somente quando a parcela estiver marcada como Recebida, pela data real do repasse. Valores brutos, sem taxas. A pesquisa por aluno também filtra estes indicadores.</p>
+<div class="cards" style="margin-top:12px">
+<div class="card"><small>Pagamentos registrados</small><b id="rRegistrado">R$ 0,00</b></div>
+<div class="card"><small>Recebimentos confirmados no período</small><b id="rEfetivo">R$ 0,00</b></div>
+<div class="card"><small>Parcelas ainda previstas no período</small><b id="rPendente">R$ 0,00</b></div>
+<div class="card"><small>Parcelas recebidas no período</small><b id="rParcelasRecebidas">R$ 0,00</b></div>
+</div><p id="rFinanceiroInfo" class="muted"></p>
 <h3>Formas de pagamento</h3><div id="rMethods" class="muted"></div>
 <h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody id="rList"></tbody></table></div>
 <p class="muted">Compras, custos de estoque, parcelas de crédito e GymPass continuam mostrando o período completo, independentemente da pesquisa de aluno.</p><h3>Previsão de parcelas de crédito</h3><p class="muted">Previsão financeira; a data real de repasse depende da operadora do cartão.</p><div id="rParcelasSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Vencimento previsto</th><th>Aluno</th><th>Parcela</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody id="rParcelasList"></tbody></table></div>
@@ -608,6 +616,31 @@ async function gerarRelatorio(){
  let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(formaBR(k))}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
  document.getElementById('rList').innerHTML=payments.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${esc(alunos.find(a=>String(a.codigo)===String(x.aluno_codigo))?.nome||'Aluno não localizado')}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')}</td></tr>`).join('');
  const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');const parcelas=pr.data||[];document.getElementById('rParcelasSummary').textContent=`${parcelas.length} parcela(s) previstas neste período — ${money(parcelas.filter(x=>x.status!=='Recebida').reduce((s,x)=>s+Number(x.valor||0),0))} ainda prevista(s).`;document.getElementById('rParcelasList').innerHTML=parcelas.map(x=>`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td><td>${esc(x.status)}</td><td>${x.status==='Recebida'? '—':`<button class="secondary" onclick="marcarParcelaRecebida(${x.id})">Marcar recebida</button>`}</td></tr>`).join('');
+ // Separar movimento registrado de recebimento efetivo por data de repasse.
+ // As parcelas recebidas podem ter sido previstas para outro mês.
+ const recebidasResp=await sb.from('parcelas_credito').select('id,aluno_codigo,valor,data_recebida,status').eq('status','Recebida').gte('data_recebida',start).lte('data_recebida',end);
+ const todasParcelasResp=await sb.from('parcelas_credito').select('id,aluno_codigo,valor,status,data_prevista').gte('data_prevista',start).lte('data_prevista',end);
+ const financeiroInfo=document.getElementById('rFinanceiroInfo');
+ const recebidas=recebidasResp.data||[];
+ const recebidasFiltradas=recebidas.filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+ const previstasFiltradas=(todasParcelasResp.data||[]).filter(x=>(x.status!=='Recebida')&&(!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca)));
+ const formasParceladas=new Set(['crédito parcelado','credito parcelado','cartão de crédito parcelado','cartao de credito parcelado']);
+ const formaParcelada=f=>formasParceladas.has(String(f.forma_pagamento||'').trim().toLocaleLowerCase('pt-BR'));
+ const pagamentosImediatos=forms.filter(f=>!formaParcelada(f)).reduce((v,f)=>v+Number(f.valor||0),0);
+ const totalRecebidoParcelas=recebidasFiltradas.reduce((v,x)=>v+Number(x.valor||0),0);
+ const totalPrevisto=previstasFiltradas.reduce((v,x)=>v+Number(x.valor||0),0);
+ document.getElementById('rRegistrado').textContent=money(total);
+ document.getElementById('rEfetivo').textContent=money(pagamentosImediatos+totalRecebidoParcelas);
+ document.getElementById('rPendente').textContent=money(totalPrevisto);
+ document.getElementById('rParcelasRecebidas').textContent=money(totalRecebidoParcelas);
+ if(recebidasResp.error||todasParcelasResp.error){
+  financeiroInfo.textContent='Atenção: não foi possível consultar todas as parcelas. Os valores de recebimento podem estar incompletos.';
+  document.getElementById('rEfetivo').textContent='Indisponível';
+  document.getElementById('rPendente').textContent='Indisponível';
+  document.getElementById('rParcelasRecebidas').textContent='Indisponível';
+ }else{
+  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Marcar uma parcela como recebida utiliza a data de hoje; confira se corresponde ao repasse real.';
+ }
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
  document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(x.numero_checkin)}º</td><td>${money(x.valor)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhum check-in no período.</td></tr>';
 }
