@@ -32,6 +32,22 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 .ficha-campo{background:#f7f7f7;padding:10px;border-radius:7px;overflow-wrap:anywhere}
 .ficha-campo small{display:block;color:#666;margin-bottom:4px}
 @media(max-width:600px){.ficha-grid{grid-template-columns:1fr}}
+@media print {
+ @page { size: A4; margin: 14mm; }
+ body { background:white; }
+ body * { visibility:hidden !important; }
+ #extrato, #extrato * { visibility:visible !important; }
+ #extrato { display:block !important; position:absolute; left:0; top:0; width:100%; }
+ #extrato .box { box-shadow:none; padding:0; margin:0; }
+ #extrato .ex-controls, #extrato #exMensagem, #extrato .ex-print-button, #extrato .ex-help { display:none !important; }
+ #extrato .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+ #extrato .card { border:1px solid #ddd; padding:9px; box-shadow:none; }
+ #extrato .card b { font-size:16px; }
+ #extrato table { display:table; width:100%; }
+ #extrato tr { break-inside:avoid; }
+ #extrato th, #extrato td { font-size:10px; padding:6px; }
+ #extrato #exResultado { display:block !important; }
+}
 </style>
 </head>
 <body>
@@ -187,11 +203,11 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 </div></section>
 
 <section id="extrato" class="tab"><div class="box"><h2>Extrato Financeiro do Aluno</h2>
-<p class="muted">Consulta individual de mensalidades, compras de produtos e avaliações. Os valores representam lançamentos registrados; crédito parcelado não significa repasse integral já recebido.</p>
-<div class="grid"><div><label>Código do aluno</label><input id="exCodigo" placeholder="Ex.: 9998" oninput="exLimpar()"></div><div><label>Data inicial</label><input id="exInicio" type="date"></div><div><label>Data final</label><input id="exFim" type="date"></div></div><br>
-<button class="primary" onclick="consultarExtrato()">CONSULTAR EXTRATO</button>
+<p class="muted ex-help">Consulta individual de mensalidades, compras de produtos e avaliações. Os valores representam lançamentos registrados; crédito parcelado não significa repasse integral já recebido.</p>
+<div class="grid ex-controls"><div><label>Código do aluno</label><input id="exCodigo" placeholder="Ex.: 9998" oninput="exLimpar()"></div><div><label>Data inicial</label><input id="exInicio" type="date"></div><div><label>Data final</label><input id="exFim" type="date"></div></div><br>
+<div class="ex-controls"><button class="primary" onclick="consultarExtrato()">CONSULTAR EXTRATO</button> <button class="secondary ex-print-button" id="exImprimir" onclick="imprimirExtrato()" disabled>IMPRIMIR / SALVAR EM PDF</button></div>
 <div id="exMensagem" class="status">Informe o código do aluno e o período para consultar.</div>
-<div id="exResultado" class="hidden"><h3 id="exAlunoTitulo"></h3><div class="cards"><div class="card"><small>Total lançado</small><b id="exTotal"></b></div><div class="card"><small>Mensalidades</small><b id="exMens"></b></div><div class="card"><small>Compras de produtos</small><b id="exVendas"></b></div><div class="card"><small>Avaliações</small><b id="exAval"></b></div></div>
+<div id="exResultado" class="hidden"><p id="exPeriodoImpresso" class="muted"></p><h3 id="exAlunoTitulo"></h3><div class="cards"><div class="card"><small>Total lançado</small><b id="exTotal"></b></div><div class="card"><small>Mensalidades</small><b id="exMens"></b></div><div class="card"><small>Compras de produtos</small><b id="exVendas"></b></div><div class="card"><small>Avaliações</small><b id="exAval"></b></div></div>
 <h3>Formas de pagamento</h3><div id="exFormas" class="muted"></div>
 <h3>Histórico financeiro do aluno</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Forma de pagamento</th></tr></thead><tbody id="exLinhas"></tbody></table></div></div>
 </div></section>
@@ -535,9 +551,9 @@ async function gerarRelatorio(){
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
  document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(x.numero_checkin)}º</td><td>${money(x.valor)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhum check-in no período.</td></tr>';
 }
-function exLimpar(){document.getElementById('exResultado').classList.add('hidden');document.getElementById('exMensagem').textContent='Clique em CONSULTAR EXTRATO para pesquisar.'}
+function exLimpar(){document.getElementById('exImprimir').disabled=true;document.getElementById('exResultado').classList.add('hidden');document.getElementById('exMensagem').textContent='Clique em CONSULTAR EXTRATO para pesquisar.'}
 async function consultarExtrato(){
- const msg=document.getElementById('exMensagem'),resultado=document.getElementById('exResultado');resultado.classList.add('hidden');
+ const msg=document.getElementById('exMensagem'),resultado=document.getElementById('exResultado');resultado.classList.add('hidden');document.getElementById('exImprimir').disabled=true;
  const codigo=document.getElementById('exCodigo').value.trim(),inicio=document.getElementById('exInicio').value,fim=document.getElementById('exFim').value;
  if(!codigo||!inicio||!fim){msg.textContent='Informe o código do aluno e as duas datas.';return}
  if(inicio>fim){msg.textContent='A data inicial não pode ser posterior à data final.';return}
@@ -559,8 +575,17 @@ async function consultarExtrato(){
  const porForma={};for(const f of formas)porForma[f.forma_pagamento]=(porForma[f.forma_pagamento]||0)+Number(f.valor||0);
  document.getElementById('exFormas').innerHTML=Object.entries(porForma).map(([nome,v])=>`<div>${esc(formaBR(nome))}: <b>${money(v)}</b></div>`).join('')||'Nenhuma forma de pagamento registrada.';
  document.getElementById('exLinhas').innerHTML=pagamentos.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao||'—')}</td><td>${money(x.valor_total)}</td><td>${formas.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum pagamento encontrado neste período.</td></tr>';
- msg.textContent=`${pagamentos.length} lançamento(s) encontrado(s) entre ${dataBR(inicio)} e ${dataBR(fim)}.`;resultado.classList.remove('hidden');
+ document.getElementById('exPeriodoImpresso').textContent=`Período: ${dataBR(inicio)} a ${dataBR(fim)} · Valores lançados (crédito parcelado não significa repasse já recebido).`;
+ window.exUltimaConsulta={codigo,inicio,fim};
+ msg.textContent=`${pagamentos.length} lançamento(s) encontrado(s) entre ${dataBR(inicio)} e ${dataBR(fim)}.`;resultado.classList.remove('hidden');document.getElementById('exImprimir').disabled=false;
  }catch(e){msg.textContent='Erro ao consultar extrato: '+(e.message||e)}
+}
+function imprimirExtrato(){
+ const u=window.exUltimaConsulta;
+ if(!u||document.getElementById('exResultado').classList.contains('hidden')||u.codigo!==document.getElementById('exCodigo').value.trim()||u.inicio!==document.getElementById('exInicio').value||u.fim!==document.getElementById('exFim').value){
+  alert('Os dados da consulta foram alterados. Clique em CONSULTAR EXTRATO novamente antes de imprimir.');return;
+ }
+ window.print();
 }
 async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
 initSupabase();
