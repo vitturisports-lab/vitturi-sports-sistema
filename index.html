@@ -302,7 +302,7 @@ function trocarConfiguracao(){
  document.getElementById('cfgMsg').textContent='Cole aqui a Publishable key atual do Supabase.';
 }
 async function logout(){await sb.auth.signOut();location.reload()}
-function aba(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio()}
+function aba(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio();if(id==='pagamento')document.getElementById('pMsg').textContent=''}
 
 async function loadAll(){
  const q=await Promise.all([
@@ -378,8 +378,27 @@ const obj={codigo,nome,cpf:document.getElementById('aCpf').value.trim(),data_nas
  document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
 }
 
-function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Taxa de matrícula: ${esc(alunoAtendimento.taxa_matricula_status|| (alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente'))}<br>Vencimento do plano: ${dataBR(alunoAtendimento.vencimento_plano)}${alunoAtendimento.categoria_aluno==='Personal Trainer' && Number(alunoAtendimento.valor_personal_mensal)>0?'<br>Mensalidade Personal Trainer: '+money(alunoAtendimento.valor_personal_mensal):''}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
+// Limpa apenas o formulário temporário do atendimento; não altera registros financeiros.
+function limparFormularioAtendimento(){
+ tipoAtual=null;
+ valorAtualNum=0;
+ paymentRows=[];
+ document.getElementById('pMsg').textContent='';
+ document.getElementById('itemArea').classList.add('hidden');
+ document.getElementById('gymArea').classList.add('hidden');
+ document.getElementById('payArea').classList.add('hidden');
+ document.getElementById('paymentRows').innerHTML='';
+ document.getElementById('itemSelect').innerHTML='';
+ document.getElementById('vendaQtd').value='1';
+ document.getElementById('vendaEstoqueInfo').textContent='';
+ window.gymTemp=null;
+}
+let ultimoCodigoAtendimento='';
+function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();
+ if(c!==ultimoCodigoAtendimento){limparFormularioAtendimento();ultimoCodigoAtendimento=c;}
+alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Taxa de matrícula: ${esc(alunoAtendimento.taxa_matricula_status|| (alunoAtendimento.taxa_matricula_paga===true?'Já paga':'Pendente'))}<br>Vencimento do plano: ${dataBR(alunoAtendimento.vencimento_plano)}${alunoAtendimento.categoria_aluno==='Personal Trainer' && Number(alunoAtendimento.valor_personal_mensal)>0?'<br>Mensalidade Personal Trainer: '+money(alunoAtendimento.valor_personal_mensal):''}`;ops.classList.remove('hidden')}else{box.classList.add('hidden');ops.classList.add('hidden')}}
 async function tipoAtendimento(t){
+ document.getElementById('pMsg').textContent='';
  tipoAtual=t;document.getElementById('itemArea').classList.add('hidden');document.getElementById('gymArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');
  if(t==='gympass'){await atualizarGymInfo();return}
  const sel=document.getElementById('itemSelect');let arr=t==='mensalidade'?planos:t==='venda'?produtos:tiposAv;
@@ -466,6 +485,9 @@ async function registrarPagamento(){
  document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';
  paymentRows=[];
  document.getElementById('payArea').classList.add('hidden');
+ document.getElementById('itemArea').classList.add('hidden');
+ tipoAtual=null;
+ valorAtualNum=0;
  // Atualiza imediatamente o cartão do aluno após a gravação do novo vencimento.
  buscarAtendimento();
  // Sincroniza os dados locais com o Supabase e reexibe o atendimento selecionado.
