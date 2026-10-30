@@ -147,7 +147,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 </div></div>
 <section id="pagamento" class="tab">
 <div class="box"><h2>Atendimento / Lançamento Rápido</h2>
-<div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label>Data</label><input id="pData" type="date"></div></div>
+<div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label for="pData">Data do Pagamento</label><input id="pData" type="date"></div></div>
 <div id="pAluno" class="result hidden"></div>
 <div id="operacoes" class="hidden"><h3>O que o aluno está pagando?</h3>
 <div style="display:flex;gap:7px;flex-wrap:wrap">
@@ -458,7 +458,15 @@ async function registrarPagamento(){
    const hist=await sb.from('retornos_alunos').insert({aluno_codigo:alunoAtendimento.codigo,data_retorno:data,plano_novo:item.nome,vencimento_anterior:vencimentoAnterior,vencimento_novo:novoVencimento,pagamento_id:r.data.id});
    if(hist.error){alert('O pagamento e o novo vencimento foram salvos, mas o histórico de retorno NÃO foi registrado. Anote o pagamento #'+r.data.id+' e não repita o pagamento. Erro: '+hist.error.message);return}
  }
- document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';paymentRows=[];document.getElementById('payArea').classList.add('hidden');await loadAll();updateDashboard();
+ document.getElementById('pMsg').textContent='Pagamento registrado com sucesso.';
+ paymentRows=[];
+ document.getElementById('payArea').classList.add('hidden');
+ // Atualiza imediatamente o cartão do aluno após a gravação do novo vencimento.
+ buscarAtendimento();
+ // Sincroniza os dados locais com o Supabase e reexibe o atendimento selecionado.
+ await loadAll();
+ buscarAtendimento();
+ updateDashboard();
 }
 async function atualizarGymInfo(){
  const data=document.getElementById('pData').value||localDate(), month=data.slice(0,7);
