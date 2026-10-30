@@ -67,6 +67,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <button onclick="aba('vendas',this)">Vendas (Suplementos / Bebidas)</button>
 <button onclick="aba('avaliacoes',this)">Avaliações</button>
 <button onclick="aba('relatorios',this)">Relatórios</button>
+<button onclick="aba('extrato',this)">Extrato do Aluno</button>
 <button onclick="aba('admin',this)">Administração</button>
 <button onclick="logout()">Sair</button>
 </nav>
@@ -185,6 +186,15 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <h3>GymPass</h3><div id="rGymSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Check-in do mês</th><th>Valor</th></tr></thead><tbody id="rGymList"></tbody></table></div>
 </div></section>
 
+<section id="extrato" class="tab"><div class="box"><h2>Extrato Financeiro do Aluno</h2>
+<p class="muted">Consulta individual de mensalidades, compras de produtos e avaliações. Os valores representam lançamentos registrados; crédito parcelado não significa repasse integral já recebido.</p>
+<div class="grid"><div><label>Código do aluno</label><input id="exCodigo" placeholder="Ex.: 9998" oninput="exLimpar()"></div><div><label>Data inicial</label><input id="exInicio" type="date"></div><div><label>Data final</label><input id="exFim" type="date"></div></div><br>
+<button class="primary" onclick="consultarExtrato()">CONSULTAR EXTRATO</button>
+<div id="exMensagem" class="status">Informe o código do aluno e o período para consultar.</div>
+<div id="exResultado" class="hidden"><h3 id="exAlunoTitulo"></h3><div class="cards"><div class="card"><small>Total lançado</small><b id="exTotal"></b></div><div class="card"><small>Mensalidades</small><b id="exMens"></b></div><div class="card"><small>Compras de produtos</small><b id="exVendas"></b></div><div class="card"><small>Avaliações</small><b id="exAval"></b></div></div>
+<h3>Formas de pagamento</h3><div id="exFormas" class="muted"></div>
+<h3>Histórico financeiro do aluno</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Forma de pagamento</th></tr></thead><tbody id="exLinhas"></tbody></table></div></div>
+</div></section>
 <section id="admin" class="tab"><div class="box"><h2>Configurações</h2>
 <p class="muted">Valores e cadastros abaixo podem ser alterados. O histórico de pagamentos mantém o valor gravado na data do lançamento.</p>
 <div class="grid2"><div><label>GymPass — 1º ao 15º check-in</label><input id="g15" type="number" step="0.01"></div><div><label>GymPass — a partir do 16º</label><input id="g16" type="number" step="0.01"></div></div><br>
@@ -276,7 +286,7 @@ async function loadAll(){
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
  fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
 }
-async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7)}
+async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
 
 function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
 function renderAlunos(){
@@ -524,6 +534,33 @@ async function gerarRelatorio(){
  const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');const parcelas=pr.data||[];document.getElementById('rParcelasSummary').textContent=`${parcelas.length} parcela(s) previstas neste período — ${money(parcelas.filter(x=>x.status!=='Recebida').reduce((s,x)=>s+Number(x.valor||0),0))} ainda prevista(s).`;document.getElementById('rParcelasList').innerHTML=parcelas.map(x=>`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td><td>${esc(x.status)}</td><td>${x.status==='Recebida'? '—':`<button class="secondary" onclick="marcarParcelaRecebida(${x.id})">Marcar recebida</button>`}</td></tr>`).join('');
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
  document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(x.numero_checkin)}º</td><td>${money(x.valor)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhum check-in no período.</td></tr>';
+}
+function exLimpar(){document.getElementById('exResultado').classList.add('hidden');document.getElementById('exMensagem').textContent='Clique em CONSULTAR EXTRATO para pesquisar.'}
+async function consultarExtrato(){
+ const msg=document.getElementById('exMensagem'),resultado=document.getElementById('exResultado');resultado.classList.add('hidden');
+ const codigo=document.getElementById('exCodigo').value.trim(),inicio=document.getElementById('exInicio').value,fim=document.getElementById('exFim').value;
+ if(!codigo||!inicio||!fim){msg.textContent='Informe o código do aluno e as duas datas.';return}
+ if(inicio>fim){msg.textContent='A data inicial não pode ser posterior à data final.';return}
+ const aluno=alunos.find(a=>String(a.codigo)===codigo);
+ if(!aluno){msg.textContent='Aluno não encontrado. Confira o código cadastrado.';return}
+ msg.textContent='Consultando pagamentos...';
+ try{
+ const r=await sb.from('Pagamentos').select('id,aluno_codigo,tipo,descricao,valor_total,data_pagamento').eq('aluno_codigo',codigo).gte('data_pagamento',inicio).lte('data_pagamento',fim).order('data_pagamento',{ascending:false});
+ if(r.error)throw r.error;
+ const pagamentos=r.data||[],ids=pagamentos.map(x=>x.id);let formas=[];
+ // Buscar as formas em lotes para evitar URLs muito longas.
+ for(let i=0;i<ids.length;i+=100){const f=await sb.from('pagamento_formas').select('pagamento_id,forma_pagamento,valor').in('pagamento_id',ids.slice(i,i+100));if(f.error)throw f.error;formas.push(...(f.data||[]))}
+ const soma=arr=>arr.reduce((v,x)=>v+Number(x.valor_total||0),0);
+ document.getElementById('exAlunoTitulo').textContent=String(aluno.codigo)+' — '+String(aluno.nome||'');
+ document.getElementById('exTotal').textContent=money(soma(pagamentos));
+ document.getElementById('exMens').textContent=money(soma(pagamentos.filter(x=>x.tipo==='mensalidade')));
+ document.getElementById('exVendas').textContent=money(soma(pagamentos.filter(x=>x.tipo==='venda')));
+ document.getElementById('exAval').textContent=money(soma(pagamentos.filter(x=>x.tipo==='avaliacao')));
+ const porForma={};for(const f of formas)porForma[f.forma_pagamento]=(porForma[f.forma_pagamento]||0)+Number(f.valor||0);
+ document.getElementById('exFormas').innerHTML=Object.entries(porForma).map(([nome,v])=>`<div>${esc(formaBR(nome))}: <b>${money(v)}</b></div>`).join('')||'Nenhuma forma de pagamento registrada.';
+ document.getElementById('exLinhas').innerHTML=pagamentos.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao||'—')}</td><td>${money(x.valor_total)}</td><td>${formas.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')||'—'}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum pagamento encontrado neste período.</td></tr>';
+ msg.textContent=`${pagamentos.length} lançamento(s) encontrado(s) entre ${dataBR(inicio)} e ${dataBR(fim)}.`;resultado.classList.remove('hidden');
+ }catch(e){msg.textContent='Erro ao consultar extrato: '+(e.message||e)}
 }
 async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
 initSupabase();
