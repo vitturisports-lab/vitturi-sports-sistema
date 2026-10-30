@@ -313,6 +313,8 @@ async function loadAll(){
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
  fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
+ // Reexibe o aluno selecionado com os dados recém-carregados do Supabase.
+ if(document.getElementById('pCodigo').value.trim())buscarAtendimento();
 }
 async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
 
@@ -321,7 +323,16 @@ function renderAlunos(){
  const q=document.getElementById('buscaAluno').value.toLowerCase();
  document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button> <button class="secondary" onclick="editarAlunoPorIndice(${alunos.indexOf(a)})">Editar</button></td></tr>`).join('');
 }
-function editarAlunoPorIndice(i){const a=alunos[i];if(a)editarAluno(a.codigo)}
+async function editarAlunoPorIndice(i){
+ const a=alunos[i];if(!a)return;
+ // Busca o cadastro atualizado antes de preencher o formulário de edição.
+ const {data,error}=await sb.from('Alunos').select('*').eq('codigo',a.codigo).maybeSingle();
+ if(error){alert('Não foi possível atualizar o cadastro: '+error.message);return}
+ if(!data){alert('Aluno não encontrado no banco de dados. Atualize a lista.');return}
+ const pos=alunos.findIndex(x=>x.codigo===a.codigo);
+ if(pos>=0)alunos[pos]=data;
+ editarAluno(data.codigo);
+}
 function visualizarAlunoPorIndice(i){
  const a=alunos[i];if(!a)return;
  const campos=[
