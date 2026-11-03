@@ -112,7 +112,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <button onclick="aba('alunos',this)">Alunos</button>
 <button onclick="aba('pagamento',this)">Atendimento</button>
 <button onclick="aba('planos',this)">Planos</button>
-<button onclick="aba('vendas',this)">Vendas (Suplementos / Bebidas)</button>
+<button onclick="aba('vendas',this)">Vendas</button>
 <button onclick="aba('avaliacoes',this)">Avaliações</button>
 <button onclick="aba('relatorios',this)">Relatórios</button>
 <button onclick="aba('extrato',this)">Extrato do Aluno</button>
@@ -206,7 +206,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
 <section id="vendas" class="tab">
-<div class="box"><h2>Vendas (Suplementos / Bebidas)</h2>
+<div class="box"><h2>Vendas</h2>
 <div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Preço de venda (R$)</label><input id="prValor" type="number" step="0.01" min="0"></div></div><br>
 <button class="primary" onclick="addProduto()">ADICIONAR PRODUTO</button>
 <p class="muted">O preço de venda pode ser alterado sem apagar o histórico de compras e vendas.</p>
@@ -214,8 +214,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div class="box"><h2>Registrar Compra / Entrada no Estoque</h2>
 <p class="muted">Registre cada compra separadamente. Se o fornecedor ou o custo mudar, basta lançar uma nova compra.</p>
 <div class="grid"><div><label>Produto</label><select id="compProduto"></select></div><div><label>Quantidade comprada</label><input id="compQtd" type="number" min="1" step="1" value="1"></div><div><label>Custo por unidade (R$)</label><input id="compCusto" type="number" min="0.01" step="0.01"></div><div><label>Data da compra</label><input id="compData" type="date"></div><div><label>Fornecedor</label><input id="compFornecedor" placeholder="Nome do fornecedor"></div></div><br>
-<button class="primary" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button><div id="compMsg" class="status"></div></div>
-<div class="box"><h2>Histórico de compras</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Custo unitário</th><th>Total</th><th>Fornecedor</th></tr></thead><tbody id="listaCompras"></tbody></table></div></div>
+<button class="primary" id="compSalvarBtn" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button> <button class="secondary hidden" id="compCancelarBtn" onclick="cancelarEdicaoCompra()">CANCELAR EDIÇÃO</button><div id="compMsg" class="status"></div></div>
+<div class="box"><h2>Histórico de compras</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Custo unitário</th><th>Total</th><th>Fornecedor</th><th>Ação</th></tr></thead><tbody id="listaCompras"></tbody></table></div></div>
 </section>
 
 <section id="avaliacoes" class="tab"><div class="box"><h2>Tipos de Avaliação</h2>
@@ -565,7 +565,16 @@ async function addTipoAvaliacao(){let nome=document.getElementById('avNome').val
 function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('Planos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button> <button class="danger" onclick="excluirCatalogo('Produtos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML=produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')||'<option value="">Cadastre um produto primeiro</option>';}
+let compraEmEdicao=null;
+function cancelarEdicaoCompra(){
+ compraEmEdicao=null;document.getElementById("compSalvarBtn").textContent="REGISTRAR COMPRA";document.getElementById("compCancelarBtn").classList.add("hidden");document.getElementById("compProduto").disabled=false;document.getElementById("compQtd").value=1;document.getElementById("compCusto").value="";document.getElementById("compFornecedor").value="";document.getElementById("compData").value=localDate();
+}
+async function iniciarEdicaoCompra(id){
+ const r=await sb.from("compras_estoque").select("*").eq("id",id).single();if(r.error){alert("Não foi possível abrir a compra: "+r.error.message);return}
+ const c=r.data;compraEmEdicao=c;document.getElementById("compProduto").value=c.produto_id;document.getElementById("compProduto").disabled=true;document.getElementById("compQtd").value=c.quantidade;document.getElementById("compCusto").value=c.custo_unitario;document.getElementById("compData").value=c.data_compra;document.getElementById("compFornecedor").value=c.fornecedor||"";document.getElementById("compSalvarBtn").textContent="SALVAR CORREÇÃO";document.getElementById("compCancelarBtn").classList.remove("hidden");document.getElementById("compMsg").textContent="Corrigindo compra #"+id+". O produto não pode ser alterado; os demais campos podem ser corrigidos.";document.getElementById("compSalvarBtn").scrollIntoView({behavior:"smooth",block:"center"});
+}
 async function registrarCompraEstoque(){
+ if(compraEmEdicao){await salvarCorrecaoCompra();return;}
  const produtoId=Number(document.getElementById('compProduto').value),qtd=Math.floor(Number(document.getElementById('compQtd').value||0)),custo=Number(document.getElementById('compCusto').value||0),data=document.getElementById('compData').value||localDate(),fornecedor=document.getElementById('compFornecedor').value.trim();
  const p=produtos.find(x=>Number(x.id)===produtoId);if(!p){alert('Selecione um produto.');return}if(!Number.isInteger(qtd)||qtd<1||!Number.isFinite(custo)||custo<=0){alert('Informe quantidade inteira maior que zero e custo unitário maior que zero.');return}
  const estoqueAtual=Number(p.estoque||0),custoAtual=Number(p.custo_medio||0),novoEstoque=estoqueAtual+qtd,novoCusto=((estoqueAtual*custoAtual)+(qtd*custo))/novoEstoque;
@@ -575,7 +584,37 @@ async function registrarCompraEstoque(){
  document.getElementById('compMsg').textContent=mov.error?'Compra registrada e estoque atualizado, mas falhou o histórico de movimentação: '+mov.error.message:'Compra registrada! Estoque atualizado para '+novoEstoque+' unidade(s). Total da compra: '+money(qtd*custo)+'.';
  document.getElementById('compQtd').value=1;document.getElementById('compCusto').value='';document.getElementById('compFornecedor').value='';await loadAll();
 }
-async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="6">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${dataBR(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td></tr>`}).join('')||'<tr><td colspan="6">Nenhuma compra registrada.</td></tr>'}
+async function salvarCorrecaoCompra(){
+ const antiga=compraEmEdicao;if(!antiga)return;
+ const qtd=Number(document.getElementById('compQtd').value),custo=Number(document.getElementById('compCusto').value),data=document.getElementById('compData').value,fornecedor=document.getElementById('compFornecedor').value.trim();
+ if(!Number.isInteger(qtd)||qtd<1||!Number.isFinite(custo)||custo<=0||!data){alert('Informe quantidade inteira positiva, custo unitário positivo e data.');return}
+ if(!confirm('Confirma a correção da compra #'+antiga.id+'? O estoque atual e o custo médio serão ajustados. As vendas anteriores permanecerão registradas.'))return;
+ if(!await confirmarSenhaAdministrador())return;
+ const msg=document.getElementById('compMsg'),btn=document.getElementById('compSalvarBtn');btn.disabled=true;
+ try{
+  const cr=await sb.from('compras_estoque').select('*').eq('id',antiga.id).single();if(cr.error)throw Error(cr.error.message);
+  const old=cr.data;
+  if(Number(old.produto_id)!==Number(antiga.produto_id)||Number(old.quantidade)!==Number(antiga.quantidade)||Number(old.custo_unitario)!==Number(antiga.custo_unitario))throw Error('Esta compra foi alterada em outro acesso. Reabra a edição.');
+  const pr=await sb.from('Produtos').select('id,estoque,custo_medio').eq('id',old.produto_id).single();if(pr.error)throw Error(pr.error.message);
+  const estoque=Number(pr.data.estoque||0),custoMedio=Number(pr.data.custo_medio||0),delta=qtd-Number(old.quantidade),novoEstoque=estoque+delta;
+  if(novoEstoque<0)throw Error('A correção deixaria o estoque negativo ('+novoEstoque+'). Verifique as vendas e a quantidade.');
+  // Ajuste proporcional do valor de estoque. Não reescreve custos de vendas já registradas.
+  const valorAtual=estoque*custoMedio,valorNovo=valorAtual-Number(old.quantidade)*Number(old.custo_unitario)+qtd*custo;
+  if(novoEstoque>0&&valorNovo< -0.01)throw Error('A correção geraria custo de estoque negativo. Confira o histórico antes de continuar.');
+  const novoCusto=novoEstoque?Math.max(0,valorNovo/novoEstoque):0;
+  const dados={quantidade:qtd,custo_unitario:custo,total_compra:Number((qtd*custo).toFixed(2)),data_compra:data,fornecedor:fornecedor||null};
+  // Primeiro atualiza o produto; se a compra falhar, tenta restaurar o estoque.
+  const up=await sb.from('Produtos').update({estoque:novoEstoque,custo_medio:Number(novoCusto.toFixed(4))}).eq('id',old.produto_id).eq('estoque',pr.data.estoque).select('id');
+  if(up.error)throw Error(up.error.message);if(!up.data?.length)throw Error('O estoque mudou durante a operação. Atualize e tente novamente.');
+  const uc=await sb.from('compras_estoque').update(dados).eq('id',old.id).eq('quantidade',old.quantidade).select('id');
+  if(uc.error||!uc.data?.length){const rev=await sb.from('Produtos').update({estoque:pr.data.estoque,custo_medio:pr.data.custo_medio}).eq('id',old.produto_id).eq('estoque',novoEstoque);throw Error('A compra não foi atualizada: '+(uc.error?.message||'registro alterado')+(rev.error?' ATENÇÃO: a restauração do estoque falhou; confira os dados antes de continuar.':''));}
+  // Mantém a movimentação original da compra consistente com o registro corrigido.
+  const mov=await sb.from('movimentos_estoque').update({quantidade:qtd,custo_unitario:custo,data_movimento:data,fornecedor:fornecedor||null}).eq('produto_id',old.produto_id).eq('tipo','Compra').eq('referencia','Compra #'+old.id);
+  msg.textContent=mov.error?'Compra e estoque corrigidos, mas a movimentação não foi atualizada: '+mov.error.message:'Compra #'+old.id+' corrigida com sucesso. Estoque atual: '+novoEstoque+' unidade(s).';
+  cancelarEdicaoCompra();await loadAll();
+ }catch(e){msg.textContent='Erro na correção: '+e.message;alert(msg.textContent)}finally{btn.disabled=false}
+}
+async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="7">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${dataBR(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td><td><button class="secondary" onclick="iniciarEdicaoCompra(${Number(c.id)})">Editar</button></td></tr>`}).join('')||'<tr><td colspan="7">Nenhuma compra registrada.</td></tr>'}
 
 function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 async function confirmarSenhaAdministrador(){
