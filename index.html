@@ -71,6 +71,17 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 #boasVindas button:active{border-color:#bd0000;background:#bd0000;color:white}
 #boasVindas button:focus-visible{outline:3px solid #e00000;outline-offset:4px}
 @media print{#boasVindas{display:none!important}}
+
+/* Campos de senha protegidos e com visualização opcional */
+.senha-wrap{position:relative;width:100%}
+.senha-wrap input{padding-right:54px}
+.senha-olho{position:absolute;right:5px;top:50%;transform:translateY(-50%);border:0;background:transparent;cursor:pointer;border-radius:6px;padding:7px 10px;font-size:19px;color:#555}
+.senha-olho:focus-visible{outline:2px solid #1559aa}
+.senha-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:21000;display:flex;align-items:center;justify-content:center;padding:16px}
+.senha-modal-card{background:#fff;border-radius:12px;padding:24px;width:min(420px,100%);box-shadow:0 12px 40px #0003}
+.senha-modal-card h2{font-size:20px;margin:0 0 10px}
+.senha-modal-card p{font-size:14px;color:#555;line-height:1.5}
+.senha-modal-acoes{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
 </style>
 </head>
 <body>
@@ -83,6 +94,17 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
   </div>
 </div>
 
+
+<div id="senhaConfirmacaoModal" class="senha-modal hidden" role="dialog" aria-modal="true" aria-labelledby="senhaModalTitulo">
+ <div class="senha-modal-card">
+  <h2 id="senhaModalTitulo">Confirmação de segurança</h2>
+  <p>Digite sua senha de acesso para autorizar esta operação.</p>
+  <label for="senhaConfirmacaoInput">Senha</label>
+  <div class="senha-wrap"><input id="senhaConfirmacaoInput" type="password" autocomplete="current-password"><button type="button" class="senha-olho" onclick="alternarVisibilidadeSenha('senhaConfirmacaoInput',this)" aria-label="Mostrar senha" title="Mostrar senha">👁</button></div>
+  <div id="senhaConfirmacaoErro" class="error" role="alert" style="margin-top:9px"></div>
+  <div class="senha-modal-acoes"><button type="button" class="secondary" onclick="resolverConfirmacaoSenha(null)">CANCELAR</button><button type="button" id="senhaConfirmacaoOk" class="primary" onclick="resolverConfirmacaoSenha(document.getElementById('senhaConfirmacaoInput').value)">CONFIRMAR</button></div>
+ </div>
+</div>
 <header>ACADEMIA VITTURI SPORTS — SISTEMA DE GESTÃO ONLINE</header>
 
 <div id="setup" class="setup box">
@@ -101,7 +123,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="login" class="setup box hidden">
   <div class="title">Entrar no sistema</div>
   <label>E-mail</label><input id="email" type="email">
-  <br><label>Senha</label><input id="senha" type="password">
+  <br><label for="senha">Senha</label><div class="senha-wrap"><input id="senha" type="password" autocomplete="current-password"><button type="button" class="senha-olho" onclick="alternarVisibilidadeSenha('senha',this)" aria-label="Mostrar senha" title="Mostrar senha">👁</button></div>
   <br><button class="primary" onclick="login()">ENTRAR</button> <button type="button" onclick="trocarConfiguracao()">TROCAR CONFIGURAÇÃO</button>
   <div id="loginMsg" class="status"></div>
 </div>
@@ -617,9 +639,35 @@ async function salvarCorrecaoCompra(){
 async function carregarHistoricoCompras(){const b=document.getElementById('listaCompras');if(!b)return;const r=await sb.from('compras_estoque').select('*').order('data_compra',{ascending:false}).limit(100);if(r.error){b.innerHTML=`<tr><td colspan="7">Não foi possível carregar compras: ${esc(r.error.message)}</td></tr>`;return}b.innerHTML=(r.data||[]).map(c=>{const p=produtos.find(x=>Number(x.id)===Number(c.produto_id));return `<tr><td>${dataBR(c.data_compra)}</td><td>${esc(p?.nome||('Produto #'+c.produto_id))}</td><td>${c.quantidade}</td><td>${money(c.custo_unitario)}</td><td>${money(c.total_compra)}</td><td>${esc(c.fornecedor||'—')}</td><td><button class="secondary" onclick="iniciarEdicaoCompra(${Number(c.id)})">Editar</button></td></tr>`}).join('')||'<tr><td colspan="7">Nenhuma compra registrada.</td></tr>'}
 
 function renderTiposAv(){document.getElementById('listaAvaliacoes').innerHTML=tiposAv.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('tipos_avaliacao',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
+
+let confirmacaoSenhaPendente=null;
+function alternarVisibilidadeSenha(id,botao){
+ const campo=document.getElementById(id);if(!campo)return;
+ const mostrar=campo.type==='password';campo.type=mostrar?'text':'password';
+ botao.textContent=mostrar?'🙈':'👁';botao.setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');botao.title=mostrar?'Ocultar senha':'Mostrar senha';
+}
+function resolverConfirmacaoSenha(valor){
+ const modal=document.getElementById('senhaConfirmacaoModal');modal.classList.add('hidden');
+ const campo=document.getElementById('senhaConfirmacaoInput');campo.value='';campo.type='password';
+ const olho=modal.querySelector('.senha-olho');olho.textContent='👁';olho.title='Mostrar senha';olho.setAttribute('aria-label','Mostrar senha');
+ if(confirmacaoSenhaPendente){const resolver=confirmacaoSenhaPendente;confirmacaoSenhaPendente=null;resolver(valor)}
+}
+function solicitarSenhaProtegida(){
+ return new Promise(resolve=>{
+  const modal=document.getElementById('senhaConfirmacaoModal'),campo=document.getElementById('senhaConfirmacaoInput');
+  if(confirmacaoSenhaPendente){resolve(null);return}
+  confirmacaoSenhaPendente=resolve;campo.value='';campo.type='password';
+  document.getElementById('senhaConfirmacaoErro').textContent='';modal.classList.remove('hidden');campo.focus();
+ });
+}
+document.getElementById('senhaConfirmacaoInput').addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();resolverConfirmacaoSenha(e.target.value)}
+ if(e.key==='Escape'){e.preventDefault();resolverConfirmacaoSenha(null)}
+});
+
 async function confirmarSenhaAdministrador(){
   if(!user||!user.email){alert('Não foi possível identificar o usuário conectado. Entre novamente no sistema.');return false}
-  const senha=prompt('Confirme sua senha de acesso para autorizar esta operação:');
+  const senha=await solicitarSenhaProtegida();
   if(senha===null)return false;
   if(!senha){alert('A senha é obrigatória. Operação cancelada.');return false}
   const ver=await sb.auth.signInWithPassword({email:user.email,password:senha});
