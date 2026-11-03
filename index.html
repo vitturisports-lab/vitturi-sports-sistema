@@ -59,9 +59,28 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
  #extrato .ex-logo-header{margin:0 auto 3mm;break-inside:avoid}
  #extrato .ex-logo-header img{width:175px;max-width:100%;height:auto}
 }
+
+/* Tela de boas-vindas: exibida a cada abertura ou atualização da página. */
+#boasVindas{position:fixed;inset:0;z-index:20000;background:linear-gradient(145deg,#101114 0%,#23262b 100%);display:flex;align-items:center;justify-content:center;padding:24px;color:white;text-align:center}
+#boasVindas .bv-card{width:min(480px,100%);display:flex;flex-direction:column;align-items:center;gap:22px}
+#boasVindas .bv-logo{width:min(320px,85%);height:auto;max-height:230px;object-fit:contain}
+#boasVindas h1{font-size:clamp(24px,5vw,32px);line-height:1.2;margin:0}
+#boasVindas p{color:#d4d6da;font-size:16px;margin:0}
+#boasVindas button{width:min(280px,100%);border:0;border-radius:10px;background:white;color:#111;font-size:17px;font-weight:700;padding:16px 25px;cursor:pointer}
+#boasVindas button:focus-visible{outline:3px solid #a5d5ff;outline-offset:4px}
+@media print{#boasVindas{display:none!important}}
 </style>
 </head>
 <body>
+<div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
+  <div class="bv-card">
+    <img id="bvLogo" class="bv-logo" alt="Logo da Academia Vitturi Sports">
+    <h1 id="bvTitulo">Bem-vindo à Vitturi Sports</h1>
+    <p>Sistema de Gestão Online</p>
+    <button type="button" onclick="entrarBoasVindas()">ENTRAR</button>
+  </div>
+</div>
+
 <header>ACADEMIA VITTURI SPORTS — SISTEMA DE GESTÃO ONLINE</header>
 
 <div id="setup" class="setup box">
@@ -708,6 +727,15 @@ function imprimirExtrato(){
  window.print();
 }
 async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
+
+function entrarBoasVindas(){
+ document.getElementById('boasVindas').classList.add('hidden');
+}
+// Reutiliza a logo original já incorporada ao extrato, sem arquivos externos.
+(function prepararLogoBoasVindas(){
+ const logoOriginal=document.querySelector('.ex-logo-header img');
+ if(logoOriginal)document.getElementById('bvLogo').src=logoOriginal.src;
+})();
 initSupabase();
 </script>
 </body>
