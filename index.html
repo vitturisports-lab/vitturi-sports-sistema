@@ -82,6 +82,11 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 .senha-modal-card h2{font-size:20px;margin:0 0 10px}
 .senha-modal-card p{font-size:14px;color:#555;line-height:1.5}
 .senha-modal-acoes{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+/* Pesquisa por nome ou código na Manutenção */
+.busca-sugestoes{margin-top:6px;max-height:230px;overflow:auto;border:1px solid #ddd;border-radius:8px;background:#fff}
+.busca-sugestoes button{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid #eee;background:#fff;text-align:left;cursor:pointer}
+.busca-sugestoes button:hover,.busca-sugestoes button:focus-visible{background:#edf3f9}
+.busca-sugestoes .muted{padding:10px}
 </style>
 </head>
 <body>
@@ -132,13 +137,13 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <nav>
 <button class="active" onclick="aba('inicio',this)">Início</button>
 <button onclick="aba('alunos',this)">Alunos</button>
-<button onclick="aba('pagamento',this)">Atendimento</button>
+<button onclick="aba('pagamento',this)">Manutenção</button>
 <button onclick="aba('planos',this)">Planos</button>
 <button onclick="aba('vendas',this)">Vendas</button>
 <button onclick="aba('avaliacoes',this)">Avaliações</button>
 <button onclick="aba('relatorios',this)">Relatórios</button>
 <button onclick="aba('extrato',this)">Extrato do Aluno</button>
-<button onclick="aba('admin',this)">Administração</button>
+<button onclick="aba('admin',this)">WellHub</button>
 <button onclick="logout()">Sair</button>
 </nav>
 <main>
@@ -166,12 +171,12 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div><label>CPF</label><input id="aCpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="this.value=formatarCPF(this.value)"></div>
 <div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
 <div><label>Gênero</label><select id="aGenero"><option value="">Não informado</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
-<div><label>Telefone</label><input id="aTel"></div>
+<div><label>Telefone</label><input id="aTel" type="tel" inputmode="tel" maxlength="15" oninput="this.value=formatarTelefone(this.value)"></div>
 <div><label>Data de cadastro (data real de entrada)</label><input id="aCadastro" type="date"></div>
 
-<div><label>Plano atual</label><select id="aPlano"></select></div>
+
 <div><label>Próximo vencimento (editável)</label><input id="aVencimento" type="date"><small class="muted">Pode ser alterado mesmo para aluno ativo. Ao cadastrar um novo aluno, deixe em branco para definir no primeiro pagamento.</small></div>
-<div><label>Status</label><select id="aStatus"><option>Ativo</option><option>Inativo</option></select></div>
+<div><label>Status</label><div class="result" id="aStatusInfo">Ativo — aguardando primeira mensalidade</div><small class="muted">Situação calculada automaticamente pelo vencimento do plano.</small></div>
 <div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
 <div id="categoriaAlunoBox"><label>Categoria do aluno</label><select id="aCategoriaAluno" onchange="atualizarCampoPersonal()"><option value="">Selecione</option><option value="Trânsito Livre">Trânsito Livre</option><option value="Personal Trainer">Personal Trainer</option></select></div>
 <div id="valorPersonalBox" class="hidden"><label for="aValorPersonal">Valor mensal individual do Personal Trainer (R$)</label><input id="aValorPersonal" type="number" min="0.01" step="0.01" placeholder="Informe o valor mensal combinado"><small class="muted">Este valor será usado nas próximas mensalidades enquanto o aluno for Personal Trainer.</small></div>
@@ -190,8 +195,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <p class="muted">Consulta somente para visualização. Para alterar informações, utilize o botão Editar.</p>
 </div></div>
 <section id="pagamento" class="tab">
-<div class="box"><h2>Atendimento / Lançamento Rápido</h2>
-<div class="grid2"><div><label>Código do aluno</label><input id="pCodigo" placeholder="Digite o código" oninput="buscarAtendimento()"></div><div><label for="pData">Data do Pagamento</label><input id="pData" type="date"></div></div>
+<div class="box"><h2>Listagem</h2>
+<div class="grid2"><div><label for="pCodigo">Código / Nome</label><input id="pCodigo" autocomplete="off" placeholder="Digite o código ou nome do aluno" oninput="buscarAtendimento()"><div id="pSugestoes" class="busca-sugestoes hidden" role="listbox" aria-label="Resultados da busca de alunos"></div></div><div><label for="pData">Data do Pagamento</label><input id="pData" type="date"></div></div>
 <div id="pAluno" class="result hidden"></div>
 <div id="operacoes" class="hidden"><h3>O que o aluno está pagando?</h3>
 <div style="display:flex;gap:7px;flex-wrap:wrap">
@@ -370,10 +375,19 @@ async function loadAll(){
 }
 async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
 
-function fillPlanSelect(){let opts='<option value="">Sem plano</option>'+planos.filter(p=>p.ativo).map(p=>`<option value="${esc(p.nome)}">${esc(p.nome)} — ${money(p.valor)}</option>`).join('');document.getElementById('aPlano').innerHTML=opts}
+function fillPlanSelect(){/* O plano é definido e atualizado no pagamento da mensalidade. */}
+function situacaoAluno(a){
+ const venc=String(a?.vencimento_plano||'').slice(0,10);
+ const hoje=localDate();
+ if(!venc)return {texto:a?.plano_atual?'Ativo — sem vencimento informado':'Ativo — aguardando primeira mensalidade',inativo:false};
+ if(venc>=hoje)return {texto:'Ativo',inativo:false};
+ const inicio=addDaysISO(venc,1);
+ const dias=Math.round((new Date(hoje+'T12:00:00')-new Date(venc+'T12:00:00'))/86400000);
+ return {texto:'Inativo desde '+dataBR(inicio)+' — '+dias+' dia'+(dias===1?'':'s'),inativo:true};
+}
 function renderAlunos(){
  const q=document.getElementById('buscaAluno').value.toLowerCase();
- document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(a.status||'')}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button> <button class="secondary" onclick="editarAlunoPorIndice(${alunos.indexOf(a)})">Editar</button></td></tr>`).join('');
+ document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(situacaoAluno(a).texto)}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button> <button class="secondary" onclick="editarAlunoPorIndice(${alunos.indexOf(a)})">Editar</button></td></tr>`).join('');
 }
 async function editarAlunoPorIndice(i){
  const a=alunos[i];if(!a)return;
@@ -388,10 +402,10 @@ async function editarAlunoPorIndice(i){
 function visualizarAlunoPorIndice(i){
  const a=alunos[i];if(!a)return;
  const campos=[
- ['Código',a.codigo],['Nome',a.nome],['CPF',formatarCPF(a.cpf)],['Telefone',a.telefone],
+ ['Código',a.codigo],['Nome',a.nome],['CPF',formatarCPF(a.cpf)],['Telefone',formatarTelefone(a.telefone)],
  ['Data de nascimento',formatarDataFicha(a.data_nascimento)],['Idade',calcularIdade(a.data_nascimento)],
  ['Gênero',a.genero],['Data de cadastro',formatarDataFicha(a.data_cadastro)],
- ['Plano atual',a.plano_atual||'Sem plano'],['Vencimento do plano',dataBR(a.vencimento_plano)],['Status',a.status],
+ ['Plano atual',a.plano_atual||'Sem plano'],['Vencimento do plano',dataBR(a.vencimento_plano)],['Status',situacaoAluno(a).texto],
  ['Tipo de pessoa',a.tipo_pessoa||'Aluno'],['Categoria do aluno',(a.tipo_pessoa||'Aluno')==='Aluno'?(a.categoria_aluno||'Não informada'):'Não se aplica']
  ];
  const root=document.getElementById('fichaConteudo');root.replaceChildren();
@@ -403,6 +417,15 @@ function visualizarAlunoPorIndice(i){
  }
  document.getElementById('fichaOverlay').classList.remove('hidden');
  carregarRetornosAluno(a.codigo);
+}
+function formatarTelefone(v){
+ const d=String(v||'').replace(/\D/g,'').slice(0,11);
+ if(!d)return '';
+ if(d.length<=2)return '('+d;
+ const p='('+d.slice(0,2)+') ';
+ if(d.length<=6)return p+d.slice(2);
+ const corte=d.length<=10?6:7;
+ return p+d.slice(2,corte)+'-'+d.slice(corte);
 }
 function formatarCPF(v){const d=String(v||'').replace(/\D/g,'').slice(0,11);return d.length>9?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6,9)+'-'+d.slice(9):d.length>6?d.slice(0,3)+'.'+d.slice(3,6)+'.'+d.slice(6):d.length>3?d.slice(0,3)+'.'+d.slice(3):d}
 function calcularIdade(v){if(!v)return 'Não informada';const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m)return 'Não informada';const hoje=new Date(),ano=+m[1],mes=+m[2],dia=+m[3];if(!mes||mes>12||!dia||dia>31)return 'Não informada';let idade=hoje.getFullYear()-ano;if(hoje.getMonth()+1<mes||(hoje.getMonth()+1===mes&&hoje.getDate()<dia))idade--;return idade>=0?idade+' anos':'Não informada'}
@@ -416,17 +439,18 @@ async function carregarRetornosAluno(codigo){
 function fecharFichaAluno(){document.getElementById('fichaOverlay').classList.add('hidden')}
 function atualizarCampoPersonal(){const ativo=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';document.getElementById('valorPersonalBox').classList.toggle('hidden',!ativo)}
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value='';atualizarCampoPersonal()}
-function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aPlano').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatus').value='Ativo';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno()}
-function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=a.telefone||'';document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aPlano').value=a.plano_atual||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatus').value=a.status||'Ativo';document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatusInfo').textContent='Ativo — aguardando primeira mensalidade';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno()}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=formatarTelefone(a.telefone||'');document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatusInfo').textContent=situacaoAluno(a).texto;document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=a.categoria_aluno||'';document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
 async function salvarAluno(){
  const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
  if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
    const personal=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';
   const valorPersonal=Number(document.getElementById('aValorPersonal').value);
   if(personal && (!document.getElementById('aValorPersonal').value || !Number.isFinite(valorPersonal) || valorPersonal<=0)){document.getElementById('alunoMsg').textContent='Informe um valor mensal válido para Personal Trainer.';return}
-const obj={codigo,nome,cpf:formatarCPF(document.getElementById('aCpf').value),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:document.getElementById('aTel').value.trim(),data_cadastro:document.getElementById('aCadastro').value||null,plano_atual:document.getElementById('aPlano').value,vencimento_plano:document.getElementById('aVencimento').value||null,status:document.getElementById('aStatus').value,tipo_pessoa:document.getElementById('aTipoPessoa').value,categoria_aluno:document.getElementById('aTipoPessoa').value==='Aluno'?(document.getElementById('aCategoriaAluno').value||null):null,valor_personal_mensal:personal?valorPersonal:null};
+const obj={codigo,nome,cpf:formatarCPF(document.getElementById('aCpf').value),data_nascimento:document.getElementById('aNasc').value||null,genero:document.getElementById('aGenero').value,telefone:formatarTelefone(document.getElementById('aTel').value),data_cadastro:document.getElementById('aCadastro').value||null,vencimento_plano:document.getElementById('aVencimento').value||null,tipo_pessoa:document.getElementById('aTipoPessoa').value,categoria_aluno:document.getElementById('aTipoPessoa').value==='Aluno'?(document.getElementById('aCategoriaAluno').value||null):null,valor_personal_mensal:personal?valorPersonal:null};
  let res;
- if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}else{res=await sb.from('Alunos').insert(obj)}
+ if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}
+ else{res=await sb.from('Alunos').insert({...obj,plano_atual:null,status:'Ativo'})}
  if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
  document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
 }
@@ -448,9 +472,64 @@ function limparFormularioAtendimento(){
  window.gymTemp=null;
 }
 let ultimoCodigoAtendimento='';
-function buscarAtendimento(){let c=document.getElementById('pCodigo').value.trim();
- if(c!==ultimoCodigoAtendimento){limparFormularioAtendimento();ultimoCodigoAtendimento=c;}
-alunoAtendimento=alunos.find(a=>a.codigo===c);const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');if(alunoAtendimento){box.classList.remove('hidden');box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(alunoAtendimento.status||'')}<br>Vencimento do plano: ${dataBR(alunoAtendimento.vencimento_plano)}${alunoAtendimento.categoria_aluno==='Personal Trainer' && Number(alunoAtendimento.valor_personal_mensal)>0?'<br>Mensalidade Personal Trainer: '+money(alunoAtendimento.valor_personal_mensal):''}`;ops.classList.remove('hidden');consultarUltimaMensalidade(alunoAtendimento.codigo)}else{box.classList.add('hidden');ops.classList.add('hidden')}}
+let codigoSelecionadoAtendimento='';
+function normalizarBuscaAluno(v){
+ return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function selecionarAlunoAtendimento(codigo){
+ const aluno=alunos.find(a=>String(a.codigo)===String(codigo));
+ if(!aluno)return;
+ codigoSelecionadoAtendimento=String(aluno.codigo);
+ document.getElementById('pCodigo').value=aluno.nome+' — '+aluno.codigo;
+ document.getElementById('pSugestoes').classList.add('hidden');
+ buscarAtendimento();
+}
+function buscarAtendimento(){
+ const entrada=document.getElementById('pCodigo').value.trim();
+ const sugestoes=document.getElementById('pSugestoes');
+ const selecionado=alunos.find(a=>String(a.codigo)===codigoSelecionadoAtendimento);
+ const textoSelecionado=selecionado?selecionado.nome+' — '+selecionado.codigo:'';
+ // Ao modificar a busca, desfaz a seleção anterior e impede lançamentos no aluno errado.
+ if(entrada!==textoSelecionado)codigoSelecionadoAtendimento='';
+ const q=normalizarBuscaAluno(entrada);
+ let aluno=alunos.find(a=>String(a.codigo)===entrada);
+ if(!aluno && codigoSelecionadoAtendimento && entrada===textoSelecionado)aluno=selecionado;
+ const matches=(!aluno && q)?alunos.filter(a=>
+   normalizarBuscaAluno(a.nome).includes(q)||normalizarBuscaAluno(a.codigo).includes(q)
+ ).slice(0,15):[];
+ if(!aluno && matches.length===1 && normalizarBuscaAluno(matches[0].nome)===q)aluno=matches[0];
+ if(aluno)codigoSelecionadoAtendimento=String(aluno.codigo);
+ if(!aluno && matches.length){
+   sugestoes.replaceChildren();
+   for(const a of matches){
+     const btn=document.createElement('button');
+     btn.type='button';
+     btn.textContent=a.nome+' — código '+a.codigo;
+     btn.onclick=()=>selecionarAlunoAtendimento(a.codigo);
+     sugestoes.appendChild(btn);
+   }
+   sugestoes.classList.remove('hidden');
+ }else{
+   sugestoes.replaceChildren();
+   sugestoes.classList.add('hidden');
+ }
+ const codigoAtual=aluno?String(aluno.codigo):'';
+ if(codigoAtual!==ultimoCodigoAtendimento){
+   limparFormularioAtendimento();
+   ultimoCodigoAtendimento=codigoAtual;
+ }
+ alunoAtendimento=aluno||null;
+ const box=document.getElementById('pAluno'),ops=document.getElementById('operacoes');
+ if(alunoAtendimento){
+   box.classList.remove('hidden');
+   box.innerHTML=`<b>${esc(alunoAtendimento.nome)}</b> — código ${esc(alunoAtendimento.codigo)}<br>Plano atual: ${esc(alunoAtendimento.plano_atual||'—')}<br>Status: ${esc(situacaoAluno(alunoAtendimento).texto)}<br>Vencimento do plano: ${dataBR(alunoAtendimento.vencimento_plano)}${alunoAtendimento.categoria_aluno==='Personal Trainer' && Number(alunoAtendimento.valor_personal_mensal)>0?'<br>Mensalidade Personal Trainer: '+money(alunoAtendimento.valor_personal_mensal):''}`;
+   ops.classList.remove('hidden');
+   consultarUltimaMensalidade(alunoAtendimento.codigo);
+ }else{
+   box.classList.add('hidden');
+   ops.classList.add('hidden');
+ }
+}
 async function consultarUltimaMensalidade(codigo){
  const box=document.getElementById('pAluno');
  const id='ultimoPagamentoAtendimento';
@@ -554,7 +633,7 @@ async function registrarPagamento(){
    const ur=await sb.from('Alunos').update({taxa_matricula_status:'Já paga',taxa_matricula_paga:true}).eq('codigo',alunoAtendimento.codigo);
    if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o status da taxa de matrícula: '+ur.error.message);return}
  }
- if(novoVencimento){const ur=await sb.from('Alunos').update({plano_atual:item.nome,vencimento_plano:novoVencimento}).eq('codigo',alunoAtendimento.codigo);if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o vencimento do plano: '+ur.error.message);return}alunoAtendimento.vencimento_plano=novoVencimento;alunoAtendimento.plano_atual=item.nome;}
+ if(novoVencimento){const ur=await sb.from('Alunos').update({plano_atual:item.nome,vencimento_plano:novoVencimento,status:'Ativo'}).eq('codigo',alunoAtendimento.codigo);if(ur.error){alert('Pagamento salvo, mas não foi possível atualizar o vencimento do plano: '+ur.error.message);return}alunoAtendimento.vencimento_plano=novoVencimento;alunoAtendimento.plano_atual=item.nome;}
  if(registrarRetorno){
    const hist=await sb.from('retornos_alunos').insert({aluno_codigo:alunoAtendimento.codigo,data_retorno:data,plano_novo:item.nome,vencimento_anterior:vencimentoAnterior,vencimento_novo:novoVencimento,pagamento_id:r.data.id});
    if(hist.error){alert('O pagamento e o novo vencimento foram salvos, mas o histórico de retorno NÃO foi registrado. Anote o pagamento #'+r.data.id+' e não repita o pagamento. Erro: '+hist.error.message);return}
