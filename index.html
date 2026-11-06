@@ -282,8 +282,8 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="pMsg" class="status"></div>
 
 <div id="previa4" class="box">
-<h2>4ª melhoria — Prévia do Atendimento</h2>
-<p class="muted"><b>Somente visualização.</b> Esta prévia não registra pagamentos, vendas, avaliações ou pendências. O Atendimento original permanece acima, sem alterações.</p>
+<h2>Atendimento completo — versão 10 (simulação de integração)</h2>
+<p class="muted"><b>Ambiente de teste:</b> selecione os itens e confira os valores. Esta etapa não grava pagamentos nem movimenta estoque. É possível gerar um arquivo de simulação para preparar a integração segura. O Atendimento original continua funcionando acima.</p>
 <h3>O que o aluno está pagando?</h3>
 <div class="pv-escolhas">
 <label><input id="pvPlano" type="checkbox" checked onchange="pvAtualizar()"> Plano</label>
@@ -293,7 +293,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div id="pvPainelPlano" class="pv-painel"><h3>Plano</h3><div class="grid2"><div><label>Selecione o plano</label><select id="pvPlanoTipo" onchange="pvAtualizar()"><option value="20">Diária</option><option value="45">Semanal</option><option value="60">Quinzenal</option><option value="100" selected>Mensal</option><option value="285">Trimestral</option><option value="540">Semestral</option><option value="960">Anual</option></select></div><div><label>Valor (R$)</label><input id="pvPlanoValor" type="number" min="0" step="0.01" value="100" onchange="pvAtualizar(false)"></div></div><div id="pvFormasPlano"></div><button type="button" class="secondary" onclick="pvAdicionarForma('plano')">+ Outra forma de pagamento</button></div>
 <div id="pvPainelVendas" class="pv-painel hidden"><h3>Vendas</h3><div id="pvProdutos"></div><button type="button" class="secondary" onclick="pvAdicionarProduto()">+ Adicionar outro produto</button></div>
 <div id="pvPainelAvaliacoes" class="pv-painel hidden"><h3>Avaliações</h3><div id="pvAvalItens"></div><button type="button" class="secondary" onclick="pvAdicionarAvaliacao()">+ Adicionar outra avaliação</button></div>
-<div class="result pv-resumo" id="pvResumo"></div><p class="muted">Cada produto e avaliação pode ter seu próprio recebimento. GymPass e todas as funções existentes permanecem sem alterações.</p>
+<div class="result pv-resumo" id="pvResumo"></div><button type="button" class="primary" onclick="pvConferirAtendimento()">CONFERIR ATENDIMENTO</button>     <div class="pv-painel" style="margin-top:12px"><h3>Taxa de matrícula e parcelamento</h3><label><input id="v17Taxa" type="checkbox"> Cobrar Taxa de matrícula (R$ 20,00)</label><div class="grid2"><div><label>Forma da taxa</label><select id="v17FormaTaxa"><option>Dinheiro</option><option>PIX (Academia)</option><option>PIX (Eliane)</option><option>PIX (Stéfano)</option><option>Débito</option><option>Crédito</option></select></div><div><label>Parcelas do plano (0 = sem parcelamento)</label><input id="v17QtdParcelas" type="number" min="0" max="24" value="0"></div></div><label>Primeiro vencimento das parcelas</label><input id="v17PrimeiroVenc" type="date"><p class="muted">Para parcelamento, selecione “Crédito parcelado” como única forma de pagamento do plano. As parcelas serão previstas, não recebidas.</p> <button type="button" class="primary" onclick="pvConfirmarV18()">CONFIRMAR ATENDIMENTO INTEGRADO</button></div><div id="pvConferencia" class="status" role="status">Confira os dados e clique em CONFIRMAR ATENDIMENTO INTEGRADO para registrar.</div><p class="muted">Cada produto e avaliação pode ter seu próprio recebimento. GymPass e todas as funções existentes permanecem sem alterações.</p>
 </div>
 </div>
 </section>
@@ -467,6 +467,8 @@ async function loadAll(){
   sb.from('tipos_avaliacao').select('*').order('nome')
  ]);
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
+ window.produtosVitturi=produtos;window.avaliacoesVitturi=tiposAv;
+ if(typeof window.pvSincronizarCatalogos==='function')window.pvSincronizarCatalogos();
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
  fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
  // Reexibe o aluno selecionado com os dados recém-carregados do Supabase.
@@ -1330,7 +1332,7 @@ async function gerarRelatorio(){
   document.getElementById('rPendente').textContent='Indisponível';
   document.getElementById('rParcelasRecebidas').textContent='Indisponível';
  }else{
-  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatosCorrigidos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Marcar uma parcela como recebida utiliza a data de hoje; confira se corresponde ao repasse real.';
+  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatosCorrigidos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Ao confirmar uma parcela, informe a data real do repasse.';
  }
  const wh=await sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento').eq('status','Recebido').gte('data_recebimento',start).lte('data_recebimento',end);
  const whTotal=(wh.data||[]).reduce((t,r)=>t+Number(r.valor_recebido||0),0);
@@ -1406,7 +1408,22 @@ function imprimirExtrato(){
  }
  window.print();
 }
-async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
+async function marcarParcelaRecebida(id){
+  const {data:parcela,error:consultaErro}=await sb.from('parcelas_credito').select('id,numero_parcela,valor,status,data_recebida').eq('id',id).maybeSingle();
+  if(consultaErro||!parcela){alert('Não foi possível consultar a parcela. '+(consultaErro?.message||''));return;}
+  if(parcela.status==='Recebida'){alert('Esta parcela já está marcada como recebida. Nenhuma alteração realizada.');return;}
+  const data=prompt('Data REAL do recebimento da parcela '+parcela.numero_parcela+' (AAAA-MM-DD):',localDate());
+  if(data===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||Number.isNaN(Date.parse(data+'T12:00:00Z'))){alert('Data inválida.');return;}
+  if(!confirm('Confirmar recebimento de '+money(parcela.valor)+' em '+dataBR(data)+'?'))return;
+  const {data:atualizada,error}=await sb.rpc('vitturi_receber_parcela_v20',{
+    p_parcela_id:id,p_data_recebida:data
+  });
+  if(error){alert('Não foi possível confirmar a parcela: '+error.message);return;}
+  if(!atualizada?.ok){alert('A confirmação não foi concluída.');return;}
+  await gerarRelatorio();
+  try { await loadAll(); } catch(e) { console.warn('Atualização da tela:',e); }
+}
 
 function entrarBoasVindas(){
  document.getElementById('boasVindas').classList.add('hidden');
@@ -1423,15 +1440,18 @@ initSupabase();
 /* 4ª melhoria: simulação visual local e isolada, sem chamadas ao banco */
 (function(){
 const formas=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
-const produtos=[['Água',3],['Coca-Cola Zero',6],['Monster',12],['Powerade',7],['Creatina',100],['Whey Protein',90],['Hipercalórico',90]];
-const avaliacoes=[['Adipometria',50],['Antropometria',50]];
+let produtos=[];
+let avaliacoes=[];
+let produtosOriginais=[];
+let avaliacoesOriginais=[];
 let sequencia=0;
 const estado={plano:[{forma:'Dinheiro',valor:100}],vendas:[],avaliacoes:[]};
 const $=id=>document.getElementById(id), moeda=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const e=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function formaHTML(f,change,remove,disabled){return `<div class="pv-forma"><select onchange="${change}'forma',this.value)">${formas.map(x=>`<option ${f.forma===x?'selected':''}>${e(x)}</option>`).join('')}</select><input type="number" step="0.01" min="0" value="${f.valor}" onchange="${change}'valor',this.value)"><button type="button" class="secondary" ${disabled?'disabled':''} onclick="${remove}">Remover</button></div>`}
-function valorItem(x){return x.tipo==='venda'?Number(produtos[x.idx][1])*Math.max(1,Number(x.qtd)||1):Number(x.valor)||0}
+function valorItem(x){return x.tipo==='venda'?Number(produtos[x.idx]?.[1]||0)*Math.max(1,Number(x.qtd)||1):Number(x.valor)||0}
 function render(){
+window.pvConferenciaValida=false;const aviso=$('pvConferencia');if(aviso){aviso.className='status';aviso.textContent='Dados alterados. Clique em CONFERIR ATENDIMENTO para validar novamente.';}
 $('pvPainelPlano').classList.toggle('hidden',!$('pvPlano').checked);$('pvPainelVendas').classList.toggle('hidden',!$('pvVendas').checked);$('pvPainelAvaliacoes').classList.toggle('hidden',!$('pvAvaliacoes').checked);
 const vp=Number($('pvPlanoValor').value)||0;
 $('pvFormasPlano').innerHTML='<label style="margin-top:12px">Formas de pagamento (prévia)</label>'+estado.plano.map((f,i)=>formaHTML(f,`pvAlterarFormaPlano(${i},`,`pvRemoverFormaPlano(${i})`,estado.plano.length===1)).join('');
@@ -1441,8 +1461,113 @@ const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').c
 $('pvResumo').innerHTML=`<b>Resumo visual do atendimento</b><div>Total: ${moeda(total)}</div><div>Pagar agora: ${moeda(total-pendente)}</div><div>Para Pendências: ${moeda(pendente)}</div><small>Simulação: nenhum lançamento será salvo.</small>`;
 }
 window.pvAtualizar=function(atualizaPlano=true){if(atualizaPlano){$('pvPlanoValor').value=$('pvPlanoTipo').value;estado.plano[0].valor=Number($('pvPlanoTipo').value)}if($('pvVendas').checked&&!estado.vendas.length)novo('venda');if($('pvAvaliacoes').checked&&!estado.avaliacoes.length)novo('avaliacao');render()};
-function novo(tipo){const x={id:++sequencia,tipo,idx:0,qtd:1,valor:50,modo:'agora',data:'',formas:[{forma:'Dinheiro',valor:tipo==='venda'?3:50}]};estado[tipo==='venda'?'vendas':'avaliacoes'].push(x)}
+function novo(tipo){const preco=tipo==='venda'?Number(produtos[0]?.[1]||0):Number(avaliacoes[0]?.[1]||0);const x={id:++sequencia,tipo,idx:0,qtd:1,valor:preco,modo:'agora',data:'',formas:[{forma:'Dinheiro',valor:preco}]};estado[tipo==='venda'?'vendas':'avaliacoes'].push(x)}
 function get(id){return [...estado.vendas,...estado.avaliacoes].find(x=>x.id===id)}
+window.pvConferirAtendimento=function(){
+ const erros=[];
+ if(!alunoAtendimento)erros.push('Selecione primeiro um aluno no campo Código / Nome, acima.');
+ if($('pvVendas').checked&&!produtos.length)erros.push('Não há produtos cadastrados disponíveis.');
+ if($('pvAvaliacoes').checked&&!avaliacoes.length)erros.push('Não há tipos de avaliação cadastrados disponíveis.');
+ const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
+ if(!$('pvPlano').checked&&!itens.length)erros.push('Selecione pelo menos um item.');
+ const conferirFormas=(formas,total,rotulo)=>{
+   const pago=formas.reduce((a,f)=>a+Number(f.valor||0),0);
+   if(formas.some(f=>!Number.isFinite(Number(f.valor))||Number(f.valor)<0))erros.push(rotulo+': valor de pagamento inválido.');
+   if(Math.abs(pago-total)>0.005)erros.push(rotulo+': formas de pagamento somam '+moeda(pago)+'; esperado '+moeda(total)+'.');
+ };
+ if($('pvPlano').checked){const valor=Number($('pvPlanoValor').value);if(!(valor>0))erros.push('Informe um valor de plano maior que zero.');conferirFormas(estado.plano,valor,'Plano')}
+ // Conferir o estoque acumulado quando o mesmo produto aparece em várias linhas.
+ const qtdPorProduto=new Map();
+ for(const x of itens.filter(x=>x.tipo==='venda')){
+   const produto=produtosOriginais[x.idx];
+   if(!produto)continue;
+   const chave=String(produto.id);
+   qtdPorProduto.set(chave,(qtdPorProduto.get(chave)||0)+Number(x.qtd||0));
+ }
+ for(const [id,qtd] of qtdPorProduto){
+   const produto=produtosOriginais.find(p=>String(p.id)===id);
+   if(produto&&qtd>Number(produto.estoque||0))erros.push('Estoque insuficiente para '+produto.nome+': solicitado '+qtd+', disponível '+Number(produto.estoque||0)+'.');
+ }
+ itens.forEach((x,i)=>{const nome=x.tipo==='venda'?'Produto':'Avaliação';const valor=valorItem(x);if(!(valor>0))erros.push(nome+' '+(i+1)+': valor inválido.');if(x.tipo==='venda'&&(!Number.isInteger(x.qtd)||x.qtd<1))erros.push(nome+' '+(i+1)+': quantidade inválida.');if(x.tipo==='venda'&&(!produtosOriginais[x.idx]||Number(produtosOriginais[x.idx].estoque||0)<x.qtd))erros.push(nome+' '+(i+1)+': estoque insuficiente ou produto não encontrado.');if(x.modo==='depois'&&!x.data)erros.push(nome+' '+(i+1)+': informe o vencimento.');if(x.modo!=='depois')conferirFormas(x.formas,valor,nome+' '+(i+1));});
+ window.pvConferenciaValida=!erros.length;const msg=$('pvConferencia');msg.className='status '+(erros.length?'error':'ok');msg.textContent=erros.length?'Conferência: '+erros.join(' '):'Conferência concluída: valores consistentes. Nenhum pagamento foi salvo e nenhum estoque foi alterado.';
+};
+window.pvMontarPayloadV12=function(){
+ const planoAtivo=$('pvPlano').checked;
+ const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
+ const payload={versao:12,modo:'VALIDACAO_SEM_GRAVAR',aluno_codigo:String(alunoAtendimento.codigo),data_atendimento:$('pData').value||'',plano:planoAtivo?{nome:$('pvPlanoTipo').selectedOptions[0].text,valor:Number($('pvPlanoValor').value),formas:estado.plano.map(f=>({...f}))}:null,itens:itens.map(x=>({tipo:x.tipo,cadastro_id:(x.tipo==='venda'?produtosOriginais:avaliacoesOriginais)[x.idx]?.id??null,nome:(x.tipo==='venda'?produtos:avaliacoes)[x.idx]?.[0]??'',quantidade:x.tipo==='venda'?x.qtd:1,valor_total:valorItem(x),recebimento:x.modo,vencimento:x.modo==='depois'?x.data:null,formas:x.modo==='agora'?x.formas.map(f=>({...f})):[]}))};
+ payload.total=Number(((payload.plano?.valor||0)+payload.itens.reduce((a,x)=>a+x.valor_total,0)).toFixed(2));
+ return payload;
+};
+window.pvValidarSupabaseV12=async function(){
+ const msg=$('pvConferencia');
+ // Revalida no momento do clique, para evitar dados antigos após edição.
+ window.pvConferirAtendimento();
+ if(!window.pvConferenciaValida)return;
+ if(typeof sb==='undefined'||!sb){msg.className='status error';msg.textContent='Supabase indisponível.';return;}
+ if(!alunoAtendimento){msg.className='status error';msg.textContent='Selecione um aluno.';return;}
+ msg.className='status';msg.textContent='Validando atendimento com a função V12 do Supabase...';
+ try{
+  const payload=window.pvMontarPayloadV12();
+  const {data,error}=await sb.rpc('vitturi_validar_atendimento_v12',{p_atendimento:payload});
+  if(error)throw error;
+  if(!data||data.ok!==true||data.modo!=='VALIDACAO_SEM_GRAVAR')throw Error('Resposta inesperada do banco.');
+  msg.className='status ok';msg.textContent='V12 VALIDADA NO SUPABASE: aluno '+data.aluno_codigo+' · '+data.quantidade_cobrancas+' cobrança(s) · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento salvo, nenhum estoque alterado.';
+ }catch(err){msg.className='status error';msg.textContent='V12 — Validação no Supabase: '+(err.message||String(err))+'. Nenhum dado foi gravado.';}
+};
+window.pvSimularV13=async function(){
+ const msg=document.getElementById('pvConferencia');
+ window.pvConferirAtendimento();
+ if(!window.pvConferenciaValida)return;
+ const payload=window.pvMontarPayloadV12();
+ if(payload.plano){msg.className='status error';msg.textContent='V13: desmarque Plano para testar apenas vendas e avaliações. Planos ainda não estão habilitados nesta função.';return;}
+ if(!payload.itens.length){msg.className='status error';msg.textContent='Selecione pelo menos uma venda ou avaliação.';return;}
+ msg.className='status';msg.textContent='Simulando função V13 no Supabase...';
+ try{
+  const chave=crypto.randomUUID();
+  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v13',{p_atendimento:payload,p_chave:chave,p_simular:true});
+  if(error)throw error;
+  if(!data||data.modo!=='SIMULACAO_V13')throw Error('Resposta inesperada do Supabase.');
+  msg.className='status ok';msg.textContent='V13 SIMULADA: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento gravado, nenhum estoque alterado.';
+ }catch(e){msg.className='status error';msg.textContent='V13: '+(e.message||String(e));}
+};
+
+window.pvSimularV14=async function(){
+ const msg=document.getElementById('pvConferencia');
+ window.pvConferirAtendimento();
+ if(!window.pvConferenciaValida)return;
+ const payload=window.pvMontarPayloadV12();
+ if(payload.plano){
+  const atual=String(alunoAtendimento?.vencimento_plano||'').slice(0,10);
+  const base=atual && atual>=payload.data_atendimento?atual:payload.data_atendimento;
+  const sugerido=planDueDate(payload.plano.nome,base);
+  const venc=prompt('Confirme o NOVO vencimento do plano (AAAA-MM-DD). Vencimento atual: '+(atual||'não informado')+'.\nSugestão calculada: '+sugerido+'\nEm caso de retorno em atraso, escolha conscientemente a data. Nenhuma alteração será gravada.',sugerido);
+  if(venc===null)return;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(venc)){msg.className='status error';msg.textContent='Informe vencimento no formato AAAA-MM-DD.';return;}
+  payload.plano.vencimento_novo=venc;
+  payload.plano.registrar_retorno=false;
+ }
+ msg.className='status';msg.textContent='Simulando V14 no Supabase sem gravar...';
+ try{
+  const chave=crypto.randomUUID();
+  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v14',{p_atendimento:payload,p_chave:chave,p_simular:true});
+  if(error)throw error;
+  if(!data||data.modo!=='SIMULACAO_V14')throw Error('Resposta inesperada do Supabase.');
+  msg.className='status ok';msg.textContent='V14 SIMULADA: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento gravado, nenhum estoque alterado.';
+ }catch(e){msg.className='status error';msg.textContent='V14: '+(e.message||String(e));}
+};
+
+window.pvGerarDadosAtendimento=function(){
+ if(!window.pvConferenciaValida){$('pvConferencia').className='status error';$('pvConferencia').textContent='Primeiro conclua a conferência sem erros. Os dados não foram gerados.';return;}
+ const planoAtivo=$('pvPlano').checked;
+ const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
+ const payload={versao:10,modo:'SIMULACAO_SEM_GRAVAR',aluno_codigo:String(alunoAtendimento.codigo),data_atendimento:$('pData').value||'',plano:planoAtivo?{nome:$('pvPlanoTipo').selectedOptions[0].text,valor:Number($('pvPlanoValor').value),formas:estado.plano.map(f=>({...f}))}:null,itens:itens.map(x=>({tipo:x.tipo,cadastro_id:(x.tipo==='venda'?produtosOriginais:avaliacoesOriginais)[x.idx]?.id??null,nome:(x.tipo==='venda'?produtos:avaliacoes)[x.idx]?.[0]??'',quantidade:x.tipo==='venda'?x.qtd:1,valor_total:valorItem(x),recebimento:x.modo,vencimento:x.modo==='depois'?x.data:null,formas:x.modo==='agora'?x.formas.map(f=>({...f})):[]}))};
+ const total=(payload.plano?.valor||0)+payload.itens.reduce((a,x)=>a+x.valor_total,0);
+ payload.total=Number(total.toFixed(2));
+ const json=JSON.stringify(payload,null,2);
+ const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+ const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Vitturi_Atendimento_Simulacao_V10.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ $('pvConferencia').className='status ok';$('pvConferencia').textContent='Dados de simulação gerados em JSON. Nenhum pagamento foi salvo e nenhum estoque foi alterado.';
+};
 window.pvAdicionarProduto=()=>{novo('venda');render()};window.pvAdicionarAvaliacao=()=>{novo('avaliacao');render()};
 window.pvRemoverItem=id=>{estado.vendas=estado.vendas.filter(x=>x.id!==id);estado.avaliacoes=estado.avaliacoes.filter(x=>x.id!==id);render()};
 window.pvMudarItem=(id,campo,valor)=>{const x=get(id);if(!x)return;x[campo]=['idx','qtd','valor'].includes(campo)?Number(valor):valor;if(campo==='idx'&&x.tipo==='avaliacao')x.valor=avaliacoes[x.idx][1];if(campo==='idx'||campo==='qtd'||campo==='valor')if(x.formas.length===1)x.formas[0].valor=valorItem(x);render()};
@@ -1451,9 +1576,125 @@ window.pvAlterarFormaPlano=(i,c,v)=>{estado.plano[i][c]=c==='valor'?Number(v):v;
 window.pvRemoverFormaPlano=i=>{if(estado.plano.length>1){estado.plano.splice(i,1);render()}};
 window.pvAlterarFormaItem=(id,i,c,v)=>{const x=get(id);if(x){x.formas[i][c]=c==='valor'?Number(v):v;render()}};
 window.pvRemoverFormaItem=(id,i)=>{const x=get(id);if(x&&x.formas.length>1){x.formas.splice(i,1);render()}};
+window.pvSincronizarCatalogos=function(){
+ produtosOriginais=window.produtosVitturi||[];avaliacoesOriginais=window.avaliacoesVitturi||[];
+ produtos=produtosOriginais.filter(x=>x.ativo!==false).map(x=>[x.nome,Number(x.valor||0)]);
+ avaliacoes=avaliacoesOriginais.filter(x=>x.ativo!==false).map(x=>[x.nome,Number(x.valor||0)]);
+ produtosOriginais=produtosOriginais.filter(x=>x.ativo!==false);avaliacoesOriginais=avaliacoesOriginais.filter(x=>x.ativo!==false);
+ [...estado.vendas,...estado.avaliacoes].forEach(x=>{const lista=x.tipo==='venda'?produtos:avaliacoes;if(x.idx>=lista.length)x.idx=0;if(x.tipo==='avaliacao')x.valor=Number(lista[x.idx]?.[1]||0);if(x.formas.length===1)x.formas[0].valor=valorItem(x)});
+ render();
+};
 render();
 })();
 
+</script>
+<script>
+/* V11: validação adicional diretamente no banco, exclusivamente SELECT. */
+window.pvVerificarBancoV11=async function(){
+ const msg=document.getElementById('pvConferencia');
+ if(!window.pvConferenciaValida){msg.className='status error';msg.textContent='Primeiro clique em CONFERIR ATENDIMENTO.';return;}
+ if(typeof sb==='undefined'||!sb){msg.className='status error';msg.textContent='Conexão com Supabase indisponível.';return;}
+ if(typeof alunoAtendimento==='undefined'||!alunoAtendimento){msg.className='status error';msg.textContent='Selecione um aluno antes de verificar.';return;}
+ msg.className='status';msg.textContent='Consultando cadastro e estoque atuais no Supabase...';
+ try{
+   const a=await sb.from('Alunos').select('codigo,nome').eq('codigo',String(alunoAtendimento.codigo)).maybeSingle();
+   if(a.error)throw a.error;
+   if(!a.data)throw Error('Aluno não encontrado no banco.');
+   const quantidades=new Map();
+   const linhas=document.querySelectorAll('#pvProdutos .pv-linha');
+   for(const linha of linhas){
+     const sel=linha.querySelector('select');const qtd=linha.querySelector('input[type="number"]');
+     if(!sel||!qtd)continue;
+     // A lista visual usa índices; o cadastro real é consultado pelo id.
+     const idx=Number(sel.value),catalogo=window.produtosVitturi||[],produto=catalogo[idx];
+     if(!produto)throw Error('Produto não encontrado no catálogo; atualize a conferência.');
+     const n=Number(qtd.value);
+     if(!Number.isInteger(n)||n<1)throw Error('Quantidade inválida para '+produto.nome+'.');
+     quantidades.set(String(produto.id),(quantidades.get(String(produto.id))||0)+n);
+   }
+   if(document.getElementById('pvVendas').checked){
+     for(const [id,qtd] of quantidades){
+       const r=await sb.from('Produtos').select('id,nome,estoque').eq('id',id).maybeSingle();
+       if(r.error)throw r.error;
+       if(!r.data)throw Error('Produto #'+id+' não existe mais no banco.');
+       if(Number(r.data.estoque||0)<qtd)throw Error('Estoque insuficiente no banco para '+r.data.nome+': solicitado '+qtd+', disponível '+Number(r.data.estoque||0)+'.');
+     }
+   }
+   msg.className='status ok';msg.textContent='Consulta concluída: aluno encontrado e estoque consultado. Nenhum pagamento foi salvo e nenhum estoque foi alterado. Esta consulta NÃO reserva estoque nem autoriza gravação.';
+ }catch(err){msg.className='status error';msg.textContent='Verificação no Supabase: '+(err.message||String(err))+'. Nenhum dado foi alterado.';}
+};
+</script>
+
+<script>
+window.pvSimularV17=async function(modoGravacao=false){
+ const msg=document.getElementById('pvConferencia');
+ window.pvConferirAtendimento();
+ if(!window.pvConferenciaValida)return;
+ if(!window.alunoAtendimento && typeof alunoAtendimento==='undefined'){msg.textContent='Selecione um aluno.';return;}
+ try {
+  const payload=window.pvMontarPayloadV12();
+  if(payload.plano){
+   const atual=String(alunoAtendimento?.vencimento_plano||'').slice(0,10);
+   const base=atual && atual>=payload.data_atendimento?atual:payload.data_atendimento;
+   const sugerido=planDueDate(payload.plano.nome,base);
+   const venc=prompt('Confirme o NOVO vencimento do plano (AAAA-MM-DD):',sugerido);
+   if(venc===null)return;
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(venc))throw Error('Vencimento inválido.');
+   payload.plano.vencimento_novo=venc;
+   payload.plano.registrar_retorno=false;
+  }
+  if(document.getElementById('v17Taxa').checked){
+   payload.taxa_matricula={valor:20,formas:[{forma:document.getElementById('v17FormaTaxa').value,valor:20}]};
+   payload.total=Number((payload.total+20).toFixed(2));
+  }
+  const qtd=Number(document.getElementById('v17QtdParcelas').value||0);
+  if(qtd){
+   if(!payload.plano)throw Error('Parcelamento exige plano.');
+   if(!Number.isInteger(qtd)||qtd<2||qtd>24)throw Error('Parcelamento: informe entre 2 e 24 parcelas.');
+   const primeiro=document.getElementById('v17PrimeiroVenc').value;
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(primeiro))throw Error('Informe o primeiro vencimento das parcelas.');
+   if(payload.plano.formas.length!==1||payload.plano.formas[0].forma!=='Crédito parcelado')throw Error('Selecione Crédito parcelado como única forma do plano.');
+   const centavos=Math.round(payload.plano.valor*100);
+   const por=Math.floor(centavos/qtd);
+   const parcelas=[];
+   for(let i=0;i<qtd;i++){
+    const [ano,mes,dia]=primeiro.split('-').map(Number);
+    const ultimo=new Date(Date.UTC(ano,mes+i,0)).getUTCDate();
+    const data=new Date(Date.UTC(ano,mes-1+i,Math.min(dia,ultimo))).toISOString().slice(0,10);
+    parcelas.push({numero:i+1,valor:(i===qtd-1?centavos-por*(qtd-1):por)/100,data_prevista:data});
+   }
+   payload.parcelamento={parcelas};
+  }
+  if(modoGravacao){
+    const resumo='Aluno '+payload.aluno_codigo+' | Total R$ '+Number(payload.total).toFixed(2).replace('.',',')+' | '+(payload.parcelamento?.parcelas.length||0)+' parcela(s).';
+    if(!confirm('CONFIRMAR GRAVAÇÃO REAL?\n'+resumo+'\nA operação não poderá ser desfeita por este botão.'))return;
+  }
+  // A chave permanece no navegador caso a resposta se perca: repetir não duplica.
+  const assinatura=JSON.stringify(payload);
+  let pendente=null;
+  try{pendente=JSON.parse(sessionStorage.getItem('vitturi_v18_pendente')||'null');}catch(_){}
+  if(modoGravacao&&pendente&&pendente.assinatura!==assinatura){
+    throw Error('Há outro atendimento aguardando confirmação. Não inicie outro até conferir o anterior.');
+  }
+  const chave=modoGravacao?(pendente?.chave||crypto.randomUUID()):crypto.randomUUID();
+  if(modoGravacao)sessionStorage.setItem('vitturi_v18_pendente',JSON.stringify({chave,assinatura}));
+  msg.className='status';msg.textContent=modoGravacao?'Enviando confirmação integrada...':'Consultando função V17 sem gravar...';
+  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v17',{p_atendimento:payload,p_chave:chave,p_simular:!modoGravacao});
+  if(error)throw error;
+  if(!data||!data.ok)throw Error('Resposta inesperada do Supabase.');
+  if(modoGravacao){
+    if(!['GRAVADO','JA_REGISTRADO'].includes(data.modo))throw Error('Confirmação não reconhecida. Verifique antes de tentar novamente.');
+    sessionStorage.removeItem('vitturi_v18_pendente');
+    msg.className='status ok';msg.textContent='Atendimento registrado: '+data.modo+' · pagamentos '+(data.pagamento_ids||[]).join(', ')+' · R$ '+Number(data.total).toFixed(2).replace('.',',');
+    // Atualiza ficha, catálogo, estoque e painel sem exigir F5. A gravação já foi confirmada.
+    try { await loadAll(); } catch(e) { console.warn('Dados gravados; falha apenas na atualização visual:',e); }
+  }else{
+    if(data.modo!=='SIMULACAO_V17')throw Error('Resposta inesperada do Supabase.');
+    msg.className='status ok';msg.textContent='V17: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+' · taxa R$ '+Number(data.taxa_matricula).toFixed(2).replace('.',',')+' · '+data.parcelas+' parcela(s). Nenhum dado gravado.';
+  }
+ }catch(e){msg.className='status error';msg.textContent='Atendimento: '+(e.message||String(e));}
+};
+window.pvConfirmarV18=()=>window.pvSimularV17(true);
 </script>
 </body>
 </html>
