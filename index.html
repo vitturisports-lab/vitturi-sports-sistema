@@ -186,7 +186,10 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 </section>
 
 <section id="alunos" class="tab">
-<div class="box"><h2>Cadastro / Edição de Aluno</h2>
+<div class="box"><h2>Pesquise</h2>
+<input id="buscaAluno" autocomplete="off" oninput="renderAlunos()" placeholder="Digite o código ou nome do aluno">
+<div id="resultadoBuscaAluno" class="hidden" style="overflow:auto"><table><thead><tr><th>Código</th><th>Nome</th><th>Plano</th><th>Ação</th></tr></thead><tbody id="listaAlunos"></tbody></table></div></div>
+<div class="box" id="formularioAluno"><h2 id="tituloFormularioAluno">Novo Cadastro</h2>
 <input type="hidden" id="oldCode">
 <div class="grid">
 <div><label>Código do aluno *</label><input id="aCodigo"></div>
@@ -200,21 +203,24 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 
 <div id="aVencimentoBox"><label>Próximo vencimento (editável)</label><input id="aVencimento" type="date"><small class="muted">Pode ser alterado mesmo para aluno ativo. Ao cadastrar um novo aluno, deixe em branco para definir no primeiro pagamento.</small></div>
 <div id="aStatusBox"><label>Status</label><div class="result" id="aStatusInfo">Ativo — aguardando primeira mensalidade</div><small class="muted">Situação calculada automaticamente pelo vencimento do plano.</small></div>
-<div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
+<div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="">Selecione</option><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
 <div id="categoriaAlunoBox"><label>Categoria do aluno</label><select id="aCategoriaAluno" onchange="atualizarCampoPersonal()"><option value="">Selecione</option><option value="Trânsito Livre">Trânsito Livre</option><option value="Personal Trainer">Personal Trainer</option><option value="GymPass / WellHub">GymPass / WellHub</option></select></div>
 <div id="valorPersonalBox" class="hidden"><label for="aValorPersonal">Valor mensal individual do Personal Trainer (R$)</label><input id="aValorPersonal" type="number" min="0.01" step="0.01" placeholder="Informe o valor mensal combinado"><small class="muted">Este valor será usado nas próximas mensalidades enquanto o aluno for Personal Trainer.</small></div>
 </div><br>
-<button class="primary" onclick="salvarAluno()">SALVAR ALUNO</button>
+<button class="primary" id="salvarAlunoBtn" onclick="salvarAluno()">SALVAR</button>
 <button class="secondary" onclick="limparAluno()">NOVO</button>
 <div id="alunoMsg" class="status"></div></div>
-<div class="box"><h2>Pesquisar alunos</h2><input id="buscaAluno" oninput="renderAlunos()" placeholder="Código, nome ou CPF">
-<table><thead><tr><th>Código</th><th>Nome</th><th>Plano</th><th>CPF</th><th>Status</th><th>Ação</th></tr></thead><tbody id="listaAlunos"></tbody></table></div>
+
 </section>
 
 <div id="fichaOverlay" class="ficha-overlay hidden" role="dialog" aria-modal="true" aria-label="Ficha do aluno" onclick="if(event.target===this)fecharFichaAluno()">
 <div class="ficha-card">
 <div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2>Ficha do aluno</h2><button class="secondary" onclick="fecharFichaAluno()">Fechar ✕</button></div>
-<div id="fichaConteudo" class="ficha-grid"></div><h3>Histórico de retornos</h3><div id="fichaRetornos" class="muted">Carregando...</div>
+<div id="fichaConteudo" class="ficha-grid"></div>
+<div style="display:flex;justify-content:flex-end;margin-top:14px"><button type="button" class="primary" id="fichaEditarBtn">EDITAR CADASTRO</button></div>
+<h3>Histórico de pagamentos e atendimentos</h3><div id="fichaHistorico" class="muted">Carregando...</div>
+<div id="fichaGymSecao" class="hidden"><h3>Histórico GymPass / WellHub</h3><div id="fichaGymHistorico"></div></div>
+<h3>Histórico de retornos</h3><div id="fichaRetornos" class="muted">Carregando...</div>
 <p class="muted">Consulta somente para visualização. Para alterar informações, utilize o botão Editar.</p>
 </div></div>
 <section id="pagamento" class="tab">
@@ -422,8 +428,13 @@ function situacaoAluno(a){
  return {texto:'Inativo desde '+dataBR(inicio)+' — '+dias+' dia'+(dias===1?'':'s'),inativo:true};
 }
 function renderAlunos(){
- const q=document.getElementById('buscaAluno').value.toLowerCase();
- document.getElementById('listaAlunos').innerHTML=alunos.filter(a=>(a.codigo+' '+a.nome+' '+(a.cpf||'')).toLowerCase().includes(q)).map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'')}</td><td>${esc(a.cpf||'')}</td><td>${esc(situacaoAluno(a).texto)}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button> <button class="secondary" onclick="editarAlunoPorIndice(${alunos.indexOf(a)})">Editar</button></td></tr>`).join('');
+ const q=normalizarBuscaAluno(document.getElementById('buscaAluno').value);
+ const area=document.getElementById('resultadoBuscaAluno');
+ const tbody=document.getElementById('listaAlunos');
+ if(!q){area.classList.add('hidden');tbody.innerHTML='';return}
+ const encontrados=alunos.filter(a=>normalizarBuscaAluno(String(a.codigo)+' '+a.nome).includes(q)).slice(0,30);
+ area.classList.remove('hidden');
+ tbody.innerHTML=encontrados.length?encontrados.map(a=>`<tr><td>${esc(a.codigo)}</td><td>${esc(a.nome)}</td><td>${esc(a.plano_atual||'—')}</td><td><button class="secondary" onclick="visualizarAlunoPorIndice(${alunos.indexOf(a)})">Visualizar</button></td></tr>`).join(''):'<tr><td colspan="4">Nenhum aluno encontrado.</td></tr>';
 }
 async function editarAlunoPorIndice(i){
  const a=alunos[i];if(!a)return;
@@ -451,8 +462,24 @@ function visualizarAlunoPorIndice(i){
   const dado=document.createElement('strong');dado.textContent=valor===null||valor===undefined||valor===''?'Não informado':String(valor);
   box.append(label,dado);root.appendChild(box);
  }
+ document.getElementById('fichaEditarBtn').onclick=()=>{fecharFichaAluno();editarAlunoPorIndice(alunos.indexOf(a));};
  document.getElementById('fichaOverlay').classList.remove('hidden');
  carregarRetornosAluno(a.codigo);
+ carregarHistoricoFichaAluno(a.codigo);
+}
+async function carregarHistoricoFichaAluno(codigo){
+ const area=document.getElementById('fichaHistorico'),secaoGym=document.getElementById('fichaGymSecao'),gymArea=document.getElementById('fichaGymHistorico');
+ area.textContent='Carregando...';secaoGym.classList.add('hidden');
+ // Consultas somente de leitura: nenhuma alteração nos lançamentos.
+ const [pag,gym]=await Promise.all([
+  sb.from('Pagamentos').select('data_pagamento,tipo,descricao,valor_total,status_recebimento').eq('aluno_codigo',codigo).order('data_pagamento',{ascending:false}),
+  sb.from('gympass_checkins').select('data_checkin,numero_checkin,valor').eq('aluno_codigo',codigo).order('data_checkin',{ascending:false})
+ ]);
+ if(pag.error){area.textContent='Não foi possível consultar os pagamentos: '+pag.error.message}
+ else if(!pag.data?.length){area.textContent='Nenhum pagamento ou atendimento registrado.'}
+ else{area.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Situação</th></tr></thead><tbody>'+pag.data.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.tipo||'')}</td><td>${esc(x.descricao||'')}</td><td>${money(x.valor_total||0)}</td><td>${esc(x.status_recebimento||'')}</td></tr>`).join('')+'</tbody></table></div>'}
+ if(gym.error){secaoGym.classList.remove('hidden');gymArea.textContent='Não foi possível consultar os check-ins: '+gym.error.message}
+ else if(gym.data?.length){secaoGym.classList.remove('hidden');gymArea.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Check-in do mês</th><th>Valor</th></tr></thead><tbody>'+gym.data.map(x=>`<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.numero_checkin||'—')}º</td><td>${money(x.valor||0)}</td></tr>`).join('')+'</tbody></table></div>'}
 }
 function formatarTelefone(v){
  const d=String(v||'').replace(/\D/g,'').slice(0,11);
@@ -476,11 +503,12 @@ function fecharFichaAluno(){document.getElementById('fichaOverlay').classList.ad
 function ehAlunoWellHub(a){return a?.tipo_pessoa==='Aluno' && ['GymPass / WellHub','GymPass','WellHub'].includes(a?.categoria_aluno)}
 function atualizarCampoPersonal(){const ativo=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';document.getElementById('valorPersonalBox').classList.toggle('hidden',!ativo);const gym=document.getElementById('aTipoPessoa').value==='Aluno'&&['GymPass / WellHub','GymPass','WellHub'].includes(document.getElementById('aCategoriaAluno').value);document.getElementById('aVencimentoBox').classList.toggle('hidden',gym);document.getElementById('aStatusBox').classList.toggle('hidden',gym)}
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value='';atualizarCampoPersonal()}
-function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatusInfo').textContent='Ativo — aguardando primeira mensalidade';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno()}
-function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=formatarTelefone(a.telefone||'');document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatusInfo').textContent=situacaoAluno(a).texto;document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=['GymPass','WellHub'].includes(a.categoria_aluno)?'GymPass / WellHub':(a.categoria_aluno||'');document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatusInfo').textContent='Ativo — aguardando primeira mensalidade';document.getElementById('aTipoPessoa').value='';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno();document.getElementById('tituloFormularioAluno').textContent='Novo Cadastro';document.getElementById('salvarAlunoBtn').textContent='SALVAR';document.getElementById('alunoMsg').textContent=''}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=formatarTelefone(a.telefone||'');document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatusInfo').textContent=situacaoAluno(a).texto;document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=['GymPass','WellHub'].includes(a.categoria_aluno)?'GymPass / WellHub':(a.categoria_aluno||'');document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();document.getElementById('tituloFormularioAluno').textContent='Editar Cadastro';document.getElementById('salvarAlunoBtn').textContent='SALVAR ALTERAÇÕES';document.getElementById('alunoMsg').textContent='';aba('alunos',document.querySelectorAll('nav button')[1]);document.getElementById('formularioAluno').scrollIntoView({behavior:'smooth',block:'start'})}
 async function salvarAluno(){
  const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
  if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
+ if(!document.getElementById('aTipoPessoa').value){document.getElementById('alunoMsg').textContent='Selecione o tipo de pessoa.';return}
    const personal=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';
   const valorPersonal=Number(document.getElementById('aValorPersonal').value);
   if(personal && (!document.getElementById('aValorPersonal').value || !Number.isFinite(valorPersonal) || valorPersonal<=0)){document.getElementById('alunoMsg').textContent='Informe um valor mensal válido para Personal Trainer.';return}
@@ -489,7 +517,7 @@ const obj={codigo,nome,cpf:formatarCPF(document.getElementById('aCpf').value),da
  if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}
  else{res=await sb.from('Alunos').insert({...obj,plano_atual:null,status:'Ativo'})}
  if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
- document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
+ await loadAll();limparAluno(); // Após salvar, retorna ao cadastro limpo, sem mensagem de sucesso.
 }
 
 // Limpa apenas o formulário temporário do atendimento; não altera registros financeiros.
@@ -512,6 +540,19 @@ let ultimoCodigoAtendimento='';
 let codigoSelecionadoAtendimento='';
 function normalizarBuscaAluno(v){
  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+function liberarPesquisaAtendimento(){
+ document.getElementById('pCodigo').value='';
+ document.getElementById('pSugestoes').replaceChildren();
+ document.getElementById('pSugestoes').classList.add('hidden');
+ codigoSelecionadoAtendimento='';ultimoCodigoAtendimento='';alunoAtendimento=null;
+ document.getElementById('pAluno').classList.add('hidden');
+ document.getElementById('operacoes').classList.add('hidden');
+ document.getElementById('itemArea').classList.add('hidden');
+ document.getElementById('gymArea').classList.add('hidden');
+ document.getElementById('payArea').classList.add('hidden');
+ document.getElementById('vendaPrazoArea').classList.add('hidden');
+ tipoAtual=null;window.gymTemp=null;
 }
 function selecionarAlunoAtendimento(codigo){
  const aluno=alunos.find(a=>String(a.codigo)===String(codigo));
@@ -621,7 +662,7 @@ async function registrarVendaPendente(){
   const mov=await sb.from('movimentos_estoque').insert({produto_id:item.id,tipo:'Venda',quantidade:-qtd,custo_unitario:Number(atual.custo_medio||0),valor_unitario:Number(item.valor||0),data_movimento:data,referencia:'Pagamento #'+id,fornecedor:null,pagamento_id:id});
   if(mov.error)throw Error('Venda #'+id+' criada e estoque baixado, mas o histórico de estoque falhou. NÃO repita a venda. '+mov.error.message);
   document.getElementById('pMsg').textContent='Venda #'+id+' registrada como PENDENTE. Vencimento: '+dataBR(venc)+'. Nenhum valor lançado no caixa.';
-  document.getElementById('itemArea').classList.add('hidden');document.getElementById('vendaPrazoArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');tipoAtual=null;await loadAll();
+  document.getElementById('itemArea').classList.add('hidden');document.getElementById('vendaPrazoArea').classList.add('hidden');document.getElementById('payArea').classList.add('hidden');tipoAtual=null;liberarPesquisaAtendimento();await loadAll();
  }catch(e){alert(e.message||String(e))}finally{btn.disabled=false}
 }
 async function carregarVendasPendentes(){
@@ -732,11 +773,9 @@ async function registrarPagamento(){
  document.getElementById('itemArea').classList.add('hidden');
  tipoAtual=null;
  valorAtualNum=0;
- // Atualiza imediatamente o cartão do aluno após a gravação do novo vencimento.
- buscarAtendimento();
- // Sincroniza os dados locais com o Supabase e reexibe o atendimento selecionado.
+ // Libera a pesquisa para um novo atendimento, preservando a confirmação na tela.
+ liberarPesquisaAtendimento();
  await loadAll();
- buscarAtendimento();
  updateDashboard();
 }
 async function atualizarGymInfo(){
@@ -779,7 +818,7 @@ async function registrarGym(){
   const r=await sb.from('gympass_checkins').insert({aluno_codigo:alunoAtendimento.codigo,data_checkin:t.data,numero_checkin:t.next,valor:t.rate});
   if(r.error){alert(r.error.code==='23505'?'Este aluno já possui check-in nessa data.':'Erro: '+r.error.message);return;}
   document.getElementById('pMsg').textContent=`Check-in ${t.next}º registrado — ${money(t.rate)}.`;
-  document.getElementById('gymArea').classList.add('hidden');updateDashboard();
+  document.getElementById('gymArea').classList.add('hidden');liberarPesquisaAtendimento();updateDashboard();
 }
 async function addPlano(){let nome=document.getElementById('plNome').value.trim(),valor=val('plValor');if(!nome)return;let r=await sb.from('Planos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('plNome').value='';document.getElementById('plValor').value='';await loadAll()}
 async function addProduto(){let nome=document.getElementById('prNome').value.trim(),valor=val('prValor');if(!nome)return;let r=await sb.from('Produtos').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('prNome').value='';document.getElementById('prValor').value='';await loadAll()}
