@@ -89,23 +89,6 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 .busca-sugestoes button{display:block;width:100%;padding:10px 12px;border:0;border-bottom:1px solid #eee;background:#fff;text-align:left;cursor:pointer}
 .busca-sugestoes button:hover,.busca-sugestoes button:focus-visible{background:#edf3f9}
 .busca-sugestoes .muted{padding:10px}
-
-/* Prévia da 4ª melhoria: usa os mesmos estilos do sistema */
-#previa4{margin-top:18px}#previa4 .pv-escolhas{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
-#previa4 .pv-escolhas label{font-size:14px;color:#202124;display:flex;align-items:center;gap:8px;padding:11px 15px;border:1px solid #ddd;border-radius:7px;cursor:pointer;background:#fff}
-#previa4 .pv-escolhas input{width:auto;margin:0}#previa4 .pv-painel{border:1px solid #e4e7eb;border-radius:8px;padding:14px;margin:12px 0;background:#fff}
-#previa4 .pv-painel h3{margin:0 0 12px}#previa4 .pv-linha{display:grid;grid-template-columns:minmax(0,2fr) 100px minmax(0,1fr) auto;gap:9px;align-items:end;margin-bottom:10px}
-#previa4 .pv-forma{display:grid;grid-template-columns:minmax(0,2fr) 140px auto;gap:8px;margin:7px 0}#previa4 .pv-resumo{margin-top:12px}
-@media(max-width:700px){#previa4 .pv-linha,#previa4 .pv-forma{grid-template-columns:1fr}}
-
-/* Painel financeiro da tela Início — versão de teste */
-.painel-total{margin:12px 0 14px!important;background:#f5f7fa;box-shadow:none;border:1px solid #e7e9ee}
-.painel-total small{display:block;margin-bottom:10px}.painel-total b{display:block;font-size:30px;line-height:1.2}.painel-categorias .card{border:1px solid #e7e9ee;box-shadow:none}
-.painel-categorias .card b{font-size:19px}.painel-wellhub{border:1px solid #e3e6eb;border-radius:10px;padding:17px;margin-top:18px}
-.painel-wellhub h3{margin:0 0 10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.painel-status{font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;padding:5px 9px;border-radius:12px}
-.painel-status.recebido{background:#e5f6e8;color:#087f23}.painel-wh-valor{font-size:27px;font-weight:700}
-#inicio h2 small{font-weight:400;margin-left:10px}
 </style>
 </head>
 <body>
@@ -150,7 +133,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
   <div class="senha-modal-acoes"><button type="button" class="secondary" onclick="fecharEdicaoPagamento()">FECHAR</button><button type="button" class="secondary" onclick="validarEdicaoPagamento()">VALIDAR DADOS</button><button type="button" id="edPagamentoSalvar" class="primary" disabled onclick="salvarEdicaoPagamento()">SALVAR PAGAMENTO</button></div>
  </div>
 </div>
-<header>ACADEMIA VITTURI SPORTS<div style="font-size:14px;font-weight:400;margin-top:5px">Sistema de Gestão Online</div></header>
+<header>ACADEMIA VITTURI SPORTS — SISTEMA DE GESTÃO ONLINE</header>
 
 <div id="setup" class="setup box">
   <div class="title">Configuração inicial</div>
@@ -189,32 +172,21 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <main>
 
 <section id="inicio" class="tab active">
-<div class="box"><h2>Movimento diário <small id="painelDataDia" class="muted"></small></h2>
- <div class="card painel-total"><small>Total recebido no dia</small><b id="painelDiaTotal">R$ 0,00</b></div>
- <div class="cards painel-categorias">
-  <div class="card"><small>Mensalidades</small><b id="painelDiaMens">R$ 0,00</b></div>
-  <div class="card"><small>Taxas de matrícula</small><b id="painelDiaTaxa">R$ 0,00</b></div>
-  <div class="card"><small>Vendas</small><b id="painelDiaVendas">R$ 0,00</b></div>
-  <div class="card"><small>Avaliações</small><b id="painelDiaAval">R$ 0,00</b></div>
- </div><p id="painelDiaWellHub" class="muted"></p>
+<div class="cards">
+<div class="card"><small>Alunos</small><b id="dashAlunos">0</b></div>
+<div class="card"><small>Operações hoje</small><b id="dashOps">0</b></div>
+<div class="card"><small>Recebido hoje (inclui WellHub)</small><b id="dashValor">R$ 0,00</b></div>
+<div class="card"><small>GymPass hoje</small><b id="dashGym">0</b></div>
 </div>
-<div class="box"><h2>Resumo financeiro mensal <small id="painelMesNome" class="muted"></small></h2>
- <div class="card painel-total"><small>Total recebido no mês</small><b id="painelMesTotal">R$ 0,00</b></div>
- <div class="cards painel-categorias">
-  <div class="card"><small>Mensalidades</small><b id="painelMesMens">R$ 0,00</b></div>
-  <div class="card"><small>Taxas de matrícula</small><b id="painelMesTaxa">R$ 0,00</b></div>
-  <div class="card"><small>Vendas</small><b id="painelMesVendas">R$ 0,00</b></div>
-  <div class="card"><small>Avaliações</small><b id="painelMesAval">R$ 0,00</b></div>
- </div>
- <div class="painel-wellhub"><h3>GymPass / WellHub <span id="painelWellHubStatus" class="painel-status">Consultando...</span></h3>
- <p class="muted" id="painelWellHubReferencia"></p><div class="painel-wh-valor" id="painelWellHubValor">R$ 0,00</div>
- <p class="muted" id="painelWellHubInfo">Consultando os check-ins e o repasse.</p></div>
- <div id="painelErro" class="muted" role="status"></div>
+<div class="box">
+<h2>Atendimento na Recepção</h2>
+<p>Digite o <b>código existente do aluno</b>. O sistema localiza o cadastro e permite lançar mensalidade, venda, avaliação ou GymPass.</p>
+<p class="muted">Os valores históricos são gravados no momento do lançamento.</p>
 </div>
 </section>
 
 <section id="alunos" class="tab">
-<div class="box"><h2 id="tituloFormularioAluno">Cadastro de Alunos</h2>
+<div class="box"><h2>Cadastro / Edição de Aluno</h2>
 <input type="hidden" id="oldCode">
 <div class="grid">
 <div><label>Código do aluno *</label><input id="aCodigo"></div>
@@ -228,12 +200,12 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 
 <div id="aVencimentoBox"><label>Próximo vencimento (editável)</label><input id="aVencimento" type="date"><small class="muted">Pode ser alterado mesmo para aluno ativo. Ao cadastrar um novo aluno, deixe em branco para definir no primeiro pagamento.</small></div>
 <div id="aStatusBox"><label>Status</label><div class="result" id="aStatusInfo">Ativo — aguardando primeira mensalidade</div><small class="muted">Situação calculada automaticamente pelo vencimento do plano.</small></div>
-<div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="">Selecione</option><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
+<div><label>Tipo de pessoa</label><select id="aTipoPessoa" onchange="atualizarCategoriaAluno()"><option value="Aluno">Aluno</option><option value="Professor">Professor</option><option value="Cortesia">Cortesia</option><option value="Colaborador">Colaborador</option></select></div>
 <div id="categoriaAlunoBox"><label>Categoria do aluno</label><select id="aCategoriaAluno" onchange="atualizarCampoPersonal()"><option value="">Selecione</option><option value="Trânsito Livre">Trânsito Livre</option><option value="Personal Trainer">Personal Trainer</option><option value="GymPass / WellHub">GymPass / WellHub</option></select></div>
 <div id="valorPersonalBox" class="hidden"><label for="aValorPersonal">Valor mensal individual do Personal Trainer (R$)</label><input id="aValorPersonal" type="number" min="0.01" step="0.01" placeholder="Informe o valor mensal combinado"><small class="muted">Este valor será usado nas próximas mensalidades enquanto o aluno for Personal Trainer.</small></div>
 </div><br>
-<button id="botaoSalvarAluno" class="primary" onclick="salvarAluno()">SALVAR NOVO ALUNO</button>
-<button id="botaoCancelarEdicaoAluno" class="secondary hidden" onclick="cancelarEdicaoAluno()">CANCELAR EDIÇÃO</button>
+<button class="primary" onclick="salvarAluno()">SALVAR ALUNO</button>
+<button class="secondary" onclick="limparAluno()">NOVO</button>
 <div id="alunoMsg" class="status"></div></div>
 <div class="box"><h2>Pesquisar alunos</h2><input id="buscaAluno" oninput="renderAlunos()" placeholder="Código, nome ou CPF">
 <table><thead><tr><th>Código</th><th>Nome</th><th>Plano</th><th>CPF</th><th>Status</th><th>Ação</th></tr></thead><tbody id="listaAlunos"></tbody></table></div>
@@ -280,21 +252,6 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <button class="primary" style="width:100%;margin-top:12px" onclick="registrarPagamento()">CONFIRMAR PAGAMENTO</button>
 </div>
 <div id="pMsg" class="status"></div>
-
-<div id="previa4" class="box">
-<h2>Atendimento completo — versão 10 (simulação de integração)</h2>
-<p class="muted"><b>Ambiente de teste:</b> selecione os itens e confira os valores. Esta etapa não grava pagamentos nem movimenta estoque. É possível gerar um arquivo de simulação para preparar a integração segura. O Atendimento original continua funcionando acima.</p>
-<h3>O que o aluno está pagando?</h3>
-<div class="pv-escolhas">
-<label><input id="pvPlano" type="checkbox" checked onchange="pvAtualizar()"> Plano</label>
-<label><input id="pvVendas" type="checkbox" onchange="pvAtualizar()"> Vendas</label>
-<label><input id="pvAvaliacoes" type="checkbox" onchange="pvAtualizar()"> Avaliações</label>
-</div>
-<div id="pvPainelPlano" class="pv-painel"><h3>Plano</h3><div class="grid2"><div><label>Selecione o plano</label><select id="pvPlanoTipo" onchange="pvAtualizar()"><option value="20">Diária</option><option value="45">Semanal</option><option value="60">Quinzenal</option><option value="100" selected>Mensal</option><option value="285">Trimestral</option><option value="540">Semestral</option><option value="960">Anual</option></select></div><div><label>Valor (R$)</label><input id="pvPlanoValor" type="number" min="0" step="0.01" value="100" onchange="pvAtualizar(false)"></div></div><div id="pvFormasPlano"></div><button type="button" class="secondary" onclick="pvAdicionarForma('plano')">+ Outra forma de pagamento</button></div>
-<div id="pvPainelVendas" class="pv-painel hidden"><h3>Vendas</h3><div id="pvProdutos"></div><button type="button" class="secondary" onclick="pvAdicionarProduto()">+ Adicionar outro produto</button></div>
-<div id="pvPainelAvaliacoes" class="pv-painel hidden"><h3>Avaliações</h3><div id="pvAvalItens"></div><button type="button" class="secondary" onclick="pvAdicionarAvaliacao()">+ Adicionar outra avaliação</button></div>
-<div class="result pv-resumo" id="pvResumo"></div><button type="button" class="primary" onclick="pvConferirAtendimento()">CONFERIR ATENDIMENTO</button>     <div class="pv-painel" style="margin-top:12px"><h3>Taxa de matrícula e parcelamento</h3><label><input id="v17Taxa" type="checkbox"> Cobrar Taxa de matrícula (R$ 20,00)</label><div class="grid2"><div><label>Forma da taxa</label><select id="v17FormaTaxa"><option>Dinheiro</option><option>PIX (Academia)</option><option>PIX (Eliane)</option><option>PIX (Stéfano)</option><option>Débito</option><option>Crédito</option></select></div><div><label>Parcelas do plano (0 = sem parcelamento)</label><input id="v17QtdParcelas" type="number" min="0" max="24" value="0"></div></div><label>Primeiro vencimento das parcelas</label><input id="v17PrimeiroVenc" type="date"><p class="muted">Para parcelamento, selecione “Crédito parcelado” como única forma de pagamento do plano. As parcelas serão previstas, não recebidas.</p> <button type="button" class="primary" onclick="pvConfirmarV18()">CONFIRMAR ATENDIMENTO INTEGRADO</button></div><div id="pvConferencia" class="status" role="status">Confira os dados e clique em CONFIRMAR ATENDIMENTO INTEGRADO para registrar.</div><p class="muted">Cada produto e avaliação pode ter seu próprio recebimento. GymPass e todas as funções existentes permanecem sem alterações.</p>
-</div>
 </div>
 </section>
 
@@ -304,7 +261,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
 <section id="vendas" class="tab">
- <div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><button type="button" class="secondary" onclick="carregarVendasPendentes()">ATUALIZAR PENDÊNCIAS</button><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Data da compra</th><th>Aluno</th><th>Produto</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div>
+ <div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><button type="button" class="secondary" onclick="carregarVendasPendentes()">ATUALIZAR PENDÊNCIAS</button><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Venda</th><th>Aluno</th><th>Produto</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div>
 <div class="box"><h2>Vendas</h2>
 <div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Preço de venda (R$)</label><input id="prValor" type="number" step="0.01" min="0"></div></div><br>
 <button class="primary" onclick="addProduto()">ADICIONAR PRODUTO</button>
@@ -436,28 +393,7 @@ function trocarConfiguracao(){
  document.getElementById('cfgMsg').textContent='Cole aqui a Publishable key atual do Supabase.';
 }
 async function logout(){await sb.auth.signOut();location.reload()}
-function limparAtendimentoAoSair(){
- // Limpa somente o estado temporário da interface, sem operações no banco.
- document.getElementById('pCodigo').value='';
- codigoSelecionadoAtendimento='';
- ultimoCodigoAtendimento='';
- alunoAtendimento=null;
- limparFormularioAtendimento();
- document.getElementById('pSugestoes').replaceChildren();
- document.getElementById('pSugestoes').classList.add('hidden');
- document.getElementById('pAluno').textContent='';
- document.getElementById('pAluno').classList.add('hidden');
- document.getElementById('operacoes').classList.add('hidden');
- document.getElementById('pData').value=localDate();
- document.getElementById('vendaModoPagamento').value='agora';
- document.getElementById('vendaPrazoArea').classList.add('hidden');
- document.getElementById('valorPersonalPlano').value='';
- document.getElementById('valorPersonalPlanoBox').classList.add('hidden');
- document.getElementById('vendaQtdBox').classList.add('hidden');
- document.getElementById('vendaQtd').value='1';
- document.getElementById('vendaEstoqueInfo').textContent='';
-}
-function aba(id,btn){if(document.getElementById('pagamento').classList.contains('active') && id!=='pagamento')limparAtendimentoAoSair();document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio();if(id==='admin')carregarWellHub();if(id==='pagamento')document.getElementById('pMsg').textContent='';if(id==='vendas')carregarVendasPendentes()}
+function aba(id,btn){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='relatorios')gerarRelatorio();if(id==='admin')carregarWellHub();if(id==='pagamento')document.getElementById('pMsg').textContent='';if(id==='vendas')carregarVendasPendentes()}
 
 async function loadAll(){
  const q=await Promise.all([
@@ -467,8 +403,6 @@ async function loadAll(){
   sb.from('tipos_avaliacao').select('*').order('nome')
  ]);
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
- window.produtosVitturi=produtos;window.avaliacoesVitturi=tiposAv;
- if(typeof window.pvSincronizarCatalogos==='function')window.pvSincronizarCatalogos();
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
  fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
  // Reexibe o aluno selecionado com os dados recém-carregados do Supabase.
@@ -540,46 +474,12 @@ async function carregarRetornosAluno(codigo){
 }
 function fecharFichaAluno(){document.getElementById('fichaOverlay').classList.add('hidden')}
 function ehAlunoWellHub(a){return a?.tipo_pessoa==='Aluno' && ['GymPass / WellHub','GymPass','WellHub'].includes(a?.categoria_aluno)}
-// Controle visual do cadastro e da edição: não altera dados até SALVAR.
-const camposFormularioAluno=['aCodigo','aNome','aCpf','aNasc','aGenero','aTel','aCadastro','aVencimento','aTipoPessoa','aCategoriaAluno','aValorPersonal'];
-let fotoInicialEdicaoAluno=null;
-function valoresFormularioAluno(){return JSON.stringify(camposFormularioAluno.map(id=>document.getElementById(id).value))}
-function definirModoAluno(editando){
- document.getElementById('tituloFormularioAluno').textContent=editando?'Edição de Aluno':'Cadastro de Alunos';
- document.getElementById('botaoSalvarAluno').textContent=editando?'SALVAR':'SALVAR NOVO ALUNO';
- document.getElementById('botaoCancelarEdicaoAluno').classList.toggle('hidden',!editando);
- if(!editando)fotoInicialEdicaoAluno=null;
-}
-function capturarEdicaoAluno(){fotoInicialEdicaoAluno=valoresFormularioAluno()}
-function cancelarEdicaoAluno(){
- if(!document.getElementById('oldCode').value)return;
- if(fotoInicialEdicaoAluno!==null&&valoresFormularioAluno()!==fotoInicialEdicaoAluno&&!confirm('Existem alterações não salvas. Deseja descartá-las?'))return;
- limparAluno();document.getElementById('alunoMsg').textContent='';
-}
-document.addEventListener('DOMContentLoaded',()=>{
- const sec=document.getElementById('alunos');
- sec.addEventListener('input',e=>{if(e.target.closest('input,select'))document.getElementById('alunoMsg').textContent=''});
- sec.addEventListener('change',e=>{if(e.target.closest('input,select'))document.getElementById('alunoMsg').textContent=''});
-});
 function atualizarCampoPersonal(){const ativo=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';document.getElementById('valorPersonalBox').classList.toggle('hidden',!ativo);const gym=document.getElementById('aTipoPessoa').value==='Aluno'&&['GymPass / WellHub','GymPass','WellHub'].includes(document.getElementById('aCategoriaAluno').value);document.getElementById('aVencimentoBox').classList.toggle('hidden',gym);document.getElementById('aStatusBox').classList.toggle('hidden',gym)}
 function atualizarCategoriaAluno(){const tipo=document.getElementById('aTipoPessoa').value;const box=document.getElementById('categoriaAlunoBox');const sel=document.getElementById('aCategoriaAluno');box.style.display=tipo==='Aluno'?'':'none';if(tipo!=='Aluno')sel.value='';atualizarCampoPersonal()}
-function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatusInfo').textContent='Ativo — aguardando primeira mensalidade';document.getElementById('aTipoPessoa').value='';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno();definirModoAluno(false)}
-function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=formatarTelefone(a.telefone||'');document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatusInfo').textContent=situacaoAluno(a).texto;document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=['GymPass','WellHub'].includes(a.categoria_aluno)?'GymPass / WellHub':(a.categoria_aluno||'');document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();definirModoAluno(true);aba('alunos',document.querySelectorAll('nav button')[1]);document.getElementById('tituloFormularioAluno').scrollIntoView({block:'start'});capturarEdicaoAluno()}
-// A confirmação de sucesso some após 3 segundos; mensagens novas não são apagadas.
-let temporizadorConfirmacaoAluno=null;
-function mostrarConfirmacaoAlunoTemporaria(mensagem){
- const el=document.getElementById('alunoMsg');
- if(temporizadorConfirmacaoAluno!==null)clearTimeout(temporizadorConfirmacaoAluno);
- el.textContent=mensagem;
- temporizadorConfirmacaoAluno=setTimeout(()=>{
-  if(el.textContent===mensagem)el.textContent='';
-  temporizadorConfirmacaoAluno=null;
- },3000);
-}
+function limparAluno(){['oldCode','aCodigo','aNome','aCpf','aNasc','aTel'].forEach(id=>document.getElementById(id).value='');document.getElementById('aCadastro').value=localDate();document.getElementById('aGenero').value='';document.getElementById('aVencimento').value='';document.getElementById('aStatusInfo').textContent='Ativo — aguardando primeira mensalidade';document.getElementById('aTipoPessoa').value='Aluno';document.getElementById('aCategoriaAluno').value='';document.getElementById('aValorPersonal').value='';atualizarCategoriaAluno()}
+function editarAluno(c){let a=alunos.find(x=>x.codigo===c);if(!a)return;document.getElementById('oldCode').value=a.codigo;document.getElementById('aCodigo').value=a.codigo;document.getElementById('aNome').value=a.nome||'';document.getElementById('aCpf').value=formatarCPF(a.cpf);document.getElementById('aNasc').value=a.data_nascimento||'';document.getElementById('aGenero').value=a.genero||'';document.getElementById('aTel').value=formatarTelefone(a.telefone||'');document.getElementById('aCadastro').value=a.data_cadastro||'';document.getElementById('aVencimento').value=a.vencimento_plano||'';document.getElementById('aStatusInfo').textContent=situacaoAluno(a).texto;document.getElementById('aTipoPessoa').value=a.tipo_pessoa||'Aluno';document.getElementById('aCategoriaAluno').value=['GymPass','WellHub'].includes(a.categoria_aluno)?'GymPass / WellHub':(a.categoria_aluno||'');document.getElementById('aValorPersonal').value=a.valor_personal_mensal??'';atualizarCategoriaAluno();aba('alunos',document.querySelectorAll('nav button')[1])}
 async function salvarAluno(){
  const codigo=document.getElementById('aCodigo').value.trim(),nome=document.getElementById('aNome').value.trim(),old=document.getElementById('oldCode').value;
- if(!document.getElementById('aTipoPessoa').value){document.getElementById('alunoMsg').textContent='Selecione o tipo de pessoa.';return}
- if(document.getElementById('aTipoPessoa').value==='Aluno'&&!document.getElementById('aCategoriaAluno').value){document.getElementById('alunoMsg').textContent='Selecione a categoria do aluno.';return}
  if(!codigo||!nome){document.getElementById('alunoMsg').textContent='Código e nome são obrigatórios.';return}
    const personal=document.getElementById('aTipoPessoa').value==='Aluno' && document.getElementById('aCategoriaAluno').value==='Personal Trainer';
   const valorPersonal=Number(document.getElementById('aValorPersonal').value);
@@ -589,7 +489,7 @@ const obj={codigo,nome,cpf:formatarCPF(document.getElementById('aCpf').value),da
  if(old){res=await sb.from('Alunos').update(obj).eq('codigo',old)}
  else{res=await sb.from('Alunos').insert({...obj,plano_atual:null,status:'Ativo'})}
  if(res.error){document.getElementById('alunoMsg').textContent='Erro: '+res.error.message;return}
- await loadAll();limparAluno();mostrarConfirmacaoAlunoTemporaria(old?'Alterações salvas com sucesso.':'Aluno salvo com sucesso.');
+ document.getElementById('alunoMsg').textContent='Aluno salvo com sucesso.';await loadAll();limparAluno();
 }
 
 // Limpa apenas o formulário temporário do atendimento; não altera registros financeiros.
@@ -729,7 +629,7 @@ async function carregarVendasPendentes(){
  const {data,error}=await sb.from('Pagamentos').select('id,aluno_codigo,descricao,valor_total,data_vencimento,data_pagamento').eq('tipo','venda').eq('status_recebimento','Pendente').order('data_vencimento',{ascending:true});
  if(error){msg.textContent='Erro ao consultar: '+error.message;return}
  const rows=data||[];msg.textContent=rows.length+' venda(s) pendente(s), total '+money(rows.reduce((a,x)=>a+Number(x.valor_total||0),0))+'.';
- tbody.innerHTML=rows.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(alunos.find(a=>String(a.codigo)===String(x.aluno_codigo))?.nome||x.aluno_codigo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${dataBR(x.data_vencimento)}</td><td><button type="button" class="secondary" onclick="marcarVendaRecebida(${Number(x.id)})">Marcar como recebido</button></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma venda pendente.</td></tr>';
+ tbody.innerHTML=rows.map(x=>`<tr><td>#${Number(x.id)}</td><td>${esc(alunos.find(a=>String(a.codigo)===String(x.aluno_codigo))?.nome||x.aluno_codigo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${dataBR(x.data_vencimento)}</td><td><button type="button" class="secondary" onclick="marcarVendaRecebida(${Number(x.id)})">Marcar como recebido</button></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma venda pendente.</td></tr>';
 }
 async function marcarVendaRecebida(id){
  const {data:x,error:e}=await sb.from('Pagamentos').select('id,aluno_codigo,descricao,valor_total,status_recebimento').eq('id',id).eq('tipo','venda').single();
@@ -1091,66 +991,9 @@ await carregarWellHub();await updateDashboard();
  finally{botao.disabled=false}
 }
 
-// Painel: totais por data efetiva de recebimento, sem incluir vendas pendentes.
 async function updateDashboard(){
- if(!sb)return;
- const hoje=localDate(), mes=hoje.slice(0,7), inicio=mes+'-01', fim=addMonthsISO(inicio,1);
- const anterior=addMonthsISO(inicio,-1).slice(0,7);
- const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
- const mesNome=m=>meses[Number(m.slice(5,7))-1]+'/'+m.slice(0,4);
- document.getElementById('painelDataDia').textContent=dataBR(hoje);
- document.getElementById('painelMesNome').textContent=meses[Number(mes.slice(5,7))-1].replace(/^./,c=>c.toUpperCase())+' / '+mes.slice(0,4);
- document.getElementById('painelWellHubReferencia').textContent='Referente aos check-ins de '+mesNome(anterior);
- const [pagMes,pagRecebidos,whMes,whAnterior,checks]=await Promise.all([
-  sb.from('Pagamentos').select('tipo,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').gte('data_pagamento',inicio).lt('data_pagamento',fim),
-  sb.from('Pagamentos').select('tipo,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').gte('data_recebimento',inicio).lt('data_recebimento',fim),
-  sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento,status').eq('status','Recebido').gte('data_recebimento',inicio).lt('data_recebimento',fim),
-  sb.from('Repasses_WellHub').select('valor_previsto,valor_recebido,data_recebimento,status').eq('competencia',anterior).maybeSingle(),
-  sb.from('gympass_checkins').select('valor').gte('data_checkin',anterior+'-01').lt('data_checkin',inicio)
- ]);
- const erro=[pagMes,pagRecebidos,whMes,whAnterior,checks].find(x=>x.error);
- if(erro){document.getElementById('painelErro').textContent='Não foi possível atualizar o painel: '+erro.error.message;return;}
- document.getElementById('painelErro').textContent='';
- const recebidos=[];
- // Lançamentos quitados no próprio dia: a data de recebimento pode estar vazia em registros antigos.
- for(const p of pagMes.data||[]){
-  if(p.status_recebimento==='Pendente')continue;
-  const dia=p.data_recebimento||p.data_pagamento;
-  if(dia>=inicio&&dia<fim){recebidos.push({...p,dia});}
- }
- // Inclui pagamentos realizados em meses anteriores, mas recebidos neste mês.
- for(const p of pagRecebidos.data||[]){
-  if(p.status_recebimento==='Pendente'||p.data_pagamento>=inicio)continue;
-  recebidos.push({...p,dia:p.data_recebimento});
- }
- const pagamentos=recebidos;
- function calcular(dia){
-  const lista=pagamentos.filter(p=>!dia||p.dia===dia);
-  const soma=f=>lista.filter(f).reduce((n,p)=>n+Number(p.valor_total||0),0);
-  const taxa=lista.filter(p=>p.tipo==='mensalidade').reduce((n,p)=>n+Number(p.taxa_matricula_valor||0),0);
-  const mensal=soma(p=>p.tipo==='mensalidade')-taxa;
-  return {mensal,taxa,vendas:soma(p=>p.tipo==='venda'),aval:soma(p=>p.tipo==='avaliacao')};
- }
- const wellhub=(whMes.data||[]).filter(r=>r.status==='Recebido');
- const whTotal=wellhub.reduce((n,r)=>n+Number(r.valor_recebido||0),0);
- const whDia=wellhub.filter(r=>r.data_recebimento===hoje).reduce((n,r)=>n+Number(r.valor_recebido||0),0);
- function mostrar(prefixo,dia,wh){
-  const t=calcular(dia);
-  for(const [chave,valor] of Object.entries({Mens:t.mensal,Taxa:t.taxa,Vendas:t.vendas,Aval:t.aval}))document.getElementById(prefixo+chave).textContent=money(valor);
-  document.getElementById(prefixo+'Total').textContent=money(t.mensal+t.taxa+t.vendas+t.aval+wh);
- }
- mostrar('painelDia',hoje,whDia);mostrar('painelMes',null,whTotal);
- document.getElementById('painelDiaWellHub').textContent=whDia?'Inclui '+money(whDia)+' de WellHub recebido hoje.':'';
- const registro=whAnterior.data, recebido=registro?.status==='Recebido';
- const previsto=(checks.data||[]).reduce((n,c)=>n+Number(c.valor||0),0);
- const status=document.getElementById('painelWellHubStatus');
- status.textContent=recebido?'Recebido':'A receber';status.classList.toggle('recebido',!!recebido);
- document.getElementById('painelWellHubValor').textContent=money(recebido?registro.valor_recebido:previsto);
- const info=document.getElementById('painelWellHubInfo');
- if(recebido){
-  const competenciaRecebida=registro.data_recebimento?.slice(0,7);
-  info.textContent='Valor incluído no total recebido de '+mesNome(competenciaRecebida||mes)+'.'+(competenciaRecebida===mes?'':' Não integra o total deste mês.');
- }else info.textContent='Ainda não incluído no total recebido.';
+ const today=localDate();let [a,p,g,w]=await Promise.all([sb.from('Alunos').select('codigo',{count:'exact',head:true}),sb.from('Pagamentos').select('valor_total,tipo,status_recebimento,data_recebimento').eq('data_pagamento',today),sb.from('gympass_checkins').select('id',{count:'exact',head:true}).eq('data_checkin',today),sb.from('Repasses_WellHub').select('valor_recebido').eq('status','Recebido').eq('data_recebimento',today)]);
+ const outrosRecebidos=await sb.from('Pagamentos').select('valor_total').eq('tipo','venda').eq('status_recebimento','Recebido').eq('data_recebimento',today).neq('data_pagamento',today);let total=(p.data||[]).filter(x=>x.status_recebimento!=='Pendente'&&(!x.data_recebimento||x.data_recebimento===today)).reduce((s,x)=>s+Number(x.valor_total||0),0)+(outrosRecebidos.data||[]).reduce((s,x)=>s+Number(x.valor_total||0),0)+(w.data||[]).reduce((s,x)=>s+Number(x.valor_recebido||0),0);document.getElementById('dashAlunos').textContent=a.count??0;document.getElementById('dashOps').textContent=(p.data||[]).length;document.getElementById('dashValor').textContent=money(total);document.getElementById('dashGym').textContent=g.count??0;
 }
 function toggleCustom(){const mode=document.getElementById('rPeriodo').value;document.getElementById('rFromBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rToBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rMonthBox').classList.toggle('hidden',mode!=='specific_month')}
 // Etapa de teste: apenas visualização. Nenhuma gravação ou exclusão é executada.
@@ -1332,7 +1175,7 @@ async function gerarRelatorio(){
   document.getElementById('rPendente').textContent='Indisponível';
   document.getElementById('rParcelasRecebidas').textContent='Indisponível';
  }else{
-  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatosCorrigidos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Ao confirmar uma parcela, informe a data real do repasse.';
+  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatosCorrigidos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Marcar uma parcela como recebida utiliza a data de hoje; confira se corresponde ao repasse real.';
  }
  const wh=await sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento').eq('status','Recebido').gte('data_recebimento',start).lte('data_recebimento',end);
  const whTotal=(wh.data||[]).reduce((t,r)=>t+Number(r.valor_recebido||0),0);
@@ -1343,7 +1186,7 @@ async function gerarRelatorio(){
  }else if(busca){financeiroInfo.textContent+=' WellHub não integra os totais filtrados por aluno; o depósito geral aparece em cartão separado.';}
  else{financeiroInfo.textContent+=' Atenção: não foi possível consultar os depósitos WellHub.';if(!recebidasResp.error&&!todasParcelasResp.error)document.getElementById('rEfetivo').textContent='Indisponível';}
  const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];const porAlunoMes={};const ordinais=new Map();[...gs].sort((a,b)=>String(a.data_checkin).localeCompare(String(b.data_checkin))||Number(a.id)-Number(b.id)).forEach(x=>{const k=String(x.aluno_codigo).trim()+'|'+String(x.data_checkin).slice(0,7);porAlunoMes[k]=(porAlunoMes[k]||0)+1;ordinais.set(x.id,porAlunoMes[k]);});document.getElementById('rGymSummary').textContent=`${gs.length} check-in(s) — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
- document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(x.numero_checkin ?? ordinais.get(x.id) ?? "—")}º</td><td>${money(x.valor)}</td><td><button type="button" class="danger" onclick="excluirCheckinWellHub(${Number(x.id)})">EXCLUIR CHECK-IN</button></td></tr>`}).join('')||'<tr><td colspan="5">Nenhum check-in no período.</td></tr>';
+ document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(Number(x.numero_checkin)>0?Number(x.numero_checkin):(ordinais.get(x.id)||1))}º</td><td>${money(x.valor)}</td><td><button type="button" class="danger" onclick="excluirCheckinWellHub(${Number(x.id)})">EXCLUIR CHECK-IN</button></td></tr>`}).join('')||'<tr><td colspan="5">Nenhum check-in no período.</td></tr>';
 }
 let codigoSelecionadoExtrato='';
 function codigoExtratoAtual(){
@@ -1408,22 +1251,7 @@ function imprimirExtrato(){
  }
  window.print();
 }
-async function marcarParcelaRecebida(id){
-  const {data:parcela,error:consultaErro}=await sb.from('parcelas_credito').select('id,numero_parcela,valor,status,data_recebida').eq('id',id).maybeSingle();
-  if(consultaErro||!parcela){alert('Não foi possível consultar a parcela. '+(consultaErro?.message||''));return;}
-  if(parcela.status==='Recebida'){alert('Esta parcela já está marcada como recebida. Nenhuma alteração realizada.');return;}
-  const data=prompt('Data REAL do recebimento da parcela '+parcela.numero_parcela+' (AAAA-MM-DD):',localDate());
-  if(data===null)return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||Number.isNaN(Date.parse(data+'T12:00:00Z'))){alert('Data inválida.');return;}
-  if(!confirm('Confirmar recebimento de '+money(parcela.valor)+' em '+dataBR(data)+'?'))return;
-  const {data:atualizada,error}=await sb.rpc('vitturi_receber_parcela_v20',{
-    p_parcela_id:id,p_data_recebida:data
-  });
-  if(error){alert('Não foi possível confirmar a parcela: '+error.message);return;}
-  if(!atualizada?.ok){alert('A confirmação não foi concluída.');return;}
-  await gerarRelatorio();
-  try { await loadAll(); } catch(e) { console.warn('Atualização da tela:',e); }
-}
+async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
 
 function entrarBoasVindas(){
  document.getElementById('boasVindas').classList.add('hidden');
@@ -1434,267 +1262,6 @@ function entrarBoasVindas(){
  if(logoOriginal)document.getElementById('bvLogo').src=logoOriginal.src;
 })();
 initSupabase();
-</script>
-<script>
-
-/* 4ª melhoria: simulação visual local e isolada, sem chamadas ao banco */
-(function(){
-const formas=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
-let produtos=[];
-let avaliacoes=[];
-let produtosOriginais=[];
-let avaliacoesOriginais=[];
-let sequencia=0;
-const estado={plano:[{forma:'Dinheiro',valor:100}],vendas:[],avaliacoes:[]};
-const $=id=>document.getElementById(id), moeda=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const e=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function formaHTML(f,change,remove,disabled){return `<div class="pv-forma"><select onchange="${change}'forma',this.value)">${formas.map(x=>`<option ${f.forma===x?'selected':''}>${e(x)}</option>`).join('')}</select><input type="number" step="0.01" min="0" value="${f.valor}" onchange="${change}'valor',this.value)"><button type="button" class="secondary" ${disabled?'disabled':''} onclick="${remove}">Remover</button></div>`}
-function valorItem(x){return x.tipo==='venda'?Number(produtos[x.idx]?.[1]||0)*Math.max(1,Number(x.qtd)||1):Number(x.valor)||0}
-function render(){
-window.pvConferenciaValida=false;const aviso=$('pvConferencia');if(aviso){aviso.className='status';aviso.textContent='Dados alterados. Clique em CONFERIR ATENDIMENTO para validar novamente.';}
-$('pvPainelPlano').classList.toggle('hidden',!$('pvPlano').checked);$('pvPainelVendas').classList.toggle('hidden',!$('pvVendas').checked);$('pvPainelAvaliacoes').classList.toggle('hidden',!$('pvAvaliacoes').checked);
-const vp=Number($('pvPlanoValor').value)||0;
-$('pvFormasPlano').innerHTML='<label style="margin-top:12px">Formas de pagamento (prévia)</label>'+estado.plano.map((f,i)=>formaHTML(f,`pvAlterarFormaPlano(${i},`,`pvRemoverFormaPlano(${i})`,estado.plano.length===1)).join('');
-function linha(x){const lista=x.tipo==='venda'?produtos:avaliacoes;const v=valorItem(x);const titulo=x.tipo==='venda'?'Produto':'Avaliação';return `<div style="border-top:1px solid #eee;padding-top:12px;margin-top:12px"><div class="pv-linha"><div><label>${titulo}</label><select onchange="pvMudarItem(${x.id},'idx',this.value)">${lista.map(([n],i)=>`<option value="${i}" ${i===x.idx?'selected':''}>${e(n)}</option>`).join('')}</select></div>${x.tipo==='venda'?`<div><label>Quantidade</label><input type="number" min="1" step="1" value="${x.qtd}" onchange="pvMudarItem(${x.id},'qtd',this.value)"></div>`:`<div><label>Valor (R$)</label><input type="number" min="0" step="0.01" value="${x.valor}" onchange="pvMudarItem(${x.id},'valor',this.value)"></div>`}<div><label>Recebimento</label><select onchange="pvMudarItem(${x.id},'modo',this.value)"><option value="agora" ${x.modo==='agora'?'selected':''}>Pagar agora</option><option value="depois" ${x.modo==='depois'?'selected':''}>Pagar depois</option></select></div><button type="button" class="secondary" onclick="pvRemoverItem(${x.id})">Remover</button></div><div class="muted" style="margin-bottom:8px">Total: <b>${moeda(v)}</b></div>${x.modo==='depois'?`<label>Data prevista para pagamento (Pendências)</label><input type="date" value="${e(x.data)}" onchange="pvMudarItem(${x.id},'data',this.value)">`:`<label>Formas de pagamento (prévia)</label>${x.formas.map((f,i)=>formaHTML(f,`pvAlterarFormaItem(${x.id},${i},`,`pvRemoverFormaItem(${x.id},${i})`,x.formas.length===1)).join('')}<button type="button" class="secondary" onclick="pvAdicionarForma(${x.id})">+ Outra forma de pagamento</button>`}</div>`}
-$('pvProdutos').innerHTML=estado.vendas.map(linha).join('');$('pvAvalItens').innerHTML=estado.avaliacoes.map(linha).join('');
-const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];const total=( $('pvPlano').checked?vp:0)+itens.reduce((a,x)=>a+valorItem(x),0);const pendente=itens.filter(x=>x.modo==='depois').reduce((a,x)=>a+valorItem(x),0);
-$('pvResumo').innerHTML=`<b>Resumo visual do atendimento</b><div>Total: ${moeda(total)}</div><div>Pagar agora: ${moeda(total-pendente)}</div><div>Para Pendências: ${moeda(pendente)}</div><small>Simulação: nenhum lançamento será salvo.</small>`;
-}
-window.pvAtualizar=function(atualizaPlano=true){if(atualizaPlano){$('pvPlanoValor').value=$('pvPlanoTipo').value;estado.plano[0].valor=Number($('pvPlanoTipo').value)}if($('pvVendas').checked&&!estado.vendas.length)novo('venda');if($('pvAvaliacoes').checked&&!estado.avaliacoes.length)novo('avaliacao');render()};
-function novo(tipo){const preco=tipo==='venda'?Number(produtos[0]?.[1]||0):Number(avaliacoes[0]?.[1]||0);const x={id:++sequencia,tipo,idx:0,qtd:1,valor:preco,modo:'agora',data:'',formas:[{forma:'Dinheiro',valor:preco}]};estado[tipo==='venda'?'vendas':'avaliacoes'].push(x)}
-function get(id){return [...estado.vendas,...estado.avaliacoes].find(x=>x.id===id)}
-window.pvConferirAtendimento=function(){
- const erros=[];
- if(!alunoAtendimento)erros.push('Selecione primeiro um aluno no campo Código / Nome, acima.');
- if($('pvVendas').checked&&!produtos.length)erros.push('Não há produtos cadastrados disponíveis.');
- if($('pvAvaliacoes').checked&&!avaliacoes.length)erros.push('Não há tipos de avaliação cadastrados disponíveis.');
- const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
- if(!$('pvPlano').checked&&!itens.length)erros.push('Selecione pelo menos um item.');
- const conferirFormas=(formas,total,rotulo)=>{
-   const pago=formas.reduce((a,f)=>a+Number(f.valor||0),0);
-   if(formas.some(f=>!Number.isFinite(Number(f.valor))||Number(f.valor)<0))erros.push(rotulo+': valor de pagamento inválido.');
-   if(Math.abs(pago-total)>0.005)erros.push(rotulo+': formas de pagamento somam '+moeda(pago)+'; esperado '+moeda(total)+'.');
- };
- if($('pvPlano').checked){const valor=Number($('pvPlanoValor').value);if(!(valor>0))erros.push('Informe um valor de plano maior que zero.');conferirFormas(estado.plano,valor,'Plano')}
- // Conferir o estoque acumulado quando o mesmo produto aparece em várias linhas.
- const qtdPorProduto=new Map();
- for(const x of itens.filter(x=>x.tipo==='venda')){
-   const produto=produtosOriginais[x.idx];
-   if(!produto)continue;
-   const chave=String(produto.id);
-   qtdPorProduto.set(chave,(qtdPorProduto.get(chave)||0)+Number(x.qtd||0));
- }
- for(const [id,qtd] of qtdPorProduto){
-   const produto=produtosOriginais.find(p=>String(p.id)===id);
-   if(produto&&qtd>Number(produto.estoque||0))erros.push('Estoque insuficiente para '+produto.nome+': solicitado '+qtd+', disponível '+Number(produto.estoque||0)+'.');
- }
- itens.forEach((x,i)=>{const nome=x.tipo==='venda'?'Produto':'Avaliação';const valor=valorItem(x);if(!(valor>0))erros.push(nome+' '+(i+1)+': valor inválido.');if(x.tipo==='venda'&&(!Number.isInteger(x.qtd)||x.qtd<1))erros.push(nome+' '+(i+1)+': quantidade inválida.');if(x.tipo==='venda'&&(!produtosOriginais[x.idx]||Number(produtosOriginais[x.idx].estoque||0)<x.qtd))erros.push(nome+' '+(i+1)+': estoque insuficiente ou produto não encontrado.');if(x.modo==='depois'&&!x.data)erros.push(nome+' '+(i+1)+': informe o vencimento.');if(x.modo!=='depois')conferirFormas(x.formas,valor,nome+' '+(i+1));});
- window.pvConferenciaValida=!erros.length;const msg=$('pvConferencia');msg.className='status '+(erros.length?'error':'ok');msg.textContent=erros.length?'Conferência: '+erros.join(' '):'Conferência concluída: valores consistentes. Nenhum pagamento foi salvo e nenhum estoque foi alterado.';
-};
-window.pvMontarPayloadV12=function(){
- const planoAtivo=$('pvPlano').checked;
- const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
- const payload={versao:12,modo:'VALIDACAO_SEM_GRAVAR',aluno_codigo:String(alunoAtendimento.codigo),data_atendimento:$('pData').value||'',plano:planoAtivo?{nome:$('pvPlanoTipo').selectedOptions[0].text,valor:Number($('pvPlanoValor').value),formas:estado.plano.map(f=>({...f}))}:null,itens:itens.map(x=>({tipo:x.tipo,cadastro_id:(x.tipo==='venda'?produtosOriginais:avaliacoesOriginais)[x.idx]?.id??null,nome:(x.tipo==='venda'?produtos:avaliacoes)[x.idx]?.[0]??'',quantidade:x.tipo==='venda'?x.qtd:1,valor_total:valorItem(x),recebimento:x.modo,vencimento:x.modo==='depois'?x.data:null,formas:x.modo==='agora'?x.formas.map(f=>({...f})):[]}))};
- payload.total=Number(((payload.plano?.valor||0)+payload.itens.reduce((a,x)=>a+x.valor_total,0)).toFixed(2));
- return payload;
-};
-window.pvValidarSupabaseV12=async function(){
- const msg=$('pvConferencia');
- // Revalida no momento do clique, para evitar dados antigos após edição.
- window.pvConferirAtendimento();
- if(!window.pvConferenciaValida)return;
- if(typeof sb==='undefined'||!sb){msg.className='status error';msg.textContent='Supabase indisponível.';return;}
- if(!alunoAtendimento){msg.className='status error';msg.textContent='Selecione um aluno.';return;}
- msg.className='status';msg.textContent='Validando atendimento com a função V12 do Supabase...';
- try{
-  const payload=window.pvMontarPayloadV12();
-  const {data,error}=await sb.rpc('vitturi_validar_atendimento_v12',{p_atendimento:payload});
-  if(error)throw error;
-  if(!data||data.ok!==true||data.modo!=='VALIDACAO_SEM_GRAVAR')throw Error('Resposta inesperada do banco.');
-  msg.className='status ok';msg.textContent='V12 VALIDADA NO SUPABASE: aluno '+data.aluno_codigo+' · '+data.quantidade_cobrancas+' cobrança(s) · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento salvo, nenhum estoque alterado.';
- }catch(err){msg.className='status error';msg.textContent='V12 — Validação no Supabase: '+(err.message||String(err))+'. Nenhum dado foi gravado.';}
-};
-window.pvSimularV13=async function(){
- const msg=document.getElementById('pvConferencia');
- window.pvConferirAtendimento();
- if(!window.pvConferenciaValida)return;
- const payload=window.pvMontarPayloadV12();
- if(payload.plano){msg.className='status error';msg.textContent='V13: desmarque Plano para testar apenas vendas e avaliações. Planos ainda não estão habilitados nesta função.';return;}
- if(!payload.itens.length){msg.className='status error';msg.textContent='Selecione pelo menos uma venda ou avaliação.';return;}
- msg.className='status';msg.textContent='Simulando função V13 no Supabase...';
- try{
-  const chave=crypto.randomUUID();
-  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v13',{p_atendimento:payload,p_chave:chave,p_simular:true});
-  if(error)throw error;
-  if(!data||data.modo!=='SIMULACAO_V13')throw Error('Resposta inesperada do Supabase.');
-  msg.className='status ok';msg.textContent='V13 SIMULADA: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento gravado, nenhum estoque alterado.';
- }catch(e){msg.className='status error';msg.textContent='V13: '+(e.message||String(e));}
-};
-
-window.pvSimularV14=async function(){
- const msg=document.getElementById('pvConferencia');
- window.pvConferirAtendimento();
- if(!window.pvConferenciaValida)return;
- const payload=window.pvMontarPayloadV12();
- if(payload.plano){
-  const atual=String(alunoAtendimento?.vencimento_plano||'').slice(0,10);
-  const base=atual && atual>=payload.data_atendimento?atual:payload.data_atendimento;
-  const sugerido=planDueDate(payload.plano.nome,base);
-  const venc=prompt('Confirme o NOVO vencimento do plano (AAAA-MM-DD). Vencimento atual: '+(atual||'não informado')+'.\nSugestão calculada: '+sugerido+'\nEm caso de retorno em atraso, escolha conscientemente a data. Nenhuma alteração será gravada.',sugerido);
-  if(venc===null)return;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(venc)){msg.className='status error';msg.textContent='Informe vencimento no formato AAAA-MM-DD.';return;}
-  payload.plano.vencimento_novo=venc;
-  payload.plano.registrar_retorno=false;
- }
- msg.className='status';msg.textContent='Simulando V14 no Supabase sem gravar...';
- try{
-  const chave=crypto.randomUUID();
-  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v14',{p_atendimento:payload,p_chave:chave,p_simular:true});
-  if(error)throw error;
-  if(!data||data.modo!=='SIMULACAO_V14')throw Error('Resposta inesperada do Supabase.');
-  msg.className='status ok';msg.textContent='V14 SIMULADA: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+'. Nenhum pagamento gravado, nenhum estoque alterado.';
- }catch(e){msg.className='status error';msg.textContent='V14: '+(e.message||String(e));}
-};
-
-window.pvGerarDadosAtendimento=function(){
- if(!window.pvConferenciaValida){$('pvConferencia').className='status error';$('pvConferencia').textContent='Primeiro conclua a conferência sem erros. Os dados não foram gerados.';return;}
- const planoAtivo=$('pvPlano').checked;
- const itens=[...($('pvVendas').checked?estado.vendas:[]),...($('pvAvaliacoes').checked?estado.avaliacoes:[])];
- const payload={versao:10,modo:'SIMULACAO_SEM_GRAVAR',aluno_codigo:String(alunoAtendimento.codigo),data_atendimento:$('pData').value||'',plano:planoAtivo?{nome:$('pvPlanoTipo').selectedOptions[0].text,valor:Number($('pvPlanoValor').value),formas:estado.plano.map(f=>({...f}))}:null,itens:itens.map(x=>({tipo:x.tipo,cadastro_id:(x.tipo==='venda'?produtosOriginais:avaliacoesOriginais)[x.idx]?.id??null,nome:(x.tipo==='venda'?produtos:avaliacoes)[x.idx]?.[0]??'',quantidade:x.tipo==='venda'?x.qtd:1,valor_total:valorItem(x),recebimento:x.modo,vencimento:x.modo==='depois'?x.data:null,formas:x.modo==='agora'?x.formas.map(f=>({...f})):[]}))};
- const total=(payload.plano?.valor||0)+payload.itens.reduce((a,x)=>a+x.valor_total,0);
- payload.total=Number(total.toFixed(2));
- const json=JSON.stringify(payload,null,2);
- const blob=new Blob([json],{type:'application/json;charset=utf-8'});
- const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Vitturi_Atendimento_Simulacao_V10.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
- $('pvConferencia').className='status ok';$('pvConferencia').textContent='Dados de simulação gerados em JSON. Nenhum pagamento foi salvo e nenhum estoque foi alterado.';
-};
-window.pvAdicionarProduto=()=>{novo('venda');render()};window.pvAdicionarAvaliacao=()=>{novo('avaliacao');render()};
-window.pvRemoverItem=id=>{estado.vendas=estado.vendas.filter(x=>x.id!==id);estado.avaliacoes=estado.avaliacoes.filter(x=>x.id!==id);render()};
-window.pvMudarItem=(id,campo,valor)=>{const x=get(id);if(!x)return;x[campo]=['idx','qtd','valor'].includes(campo)?Number(valor):valor;if(campo==='idx'&&x.tipo==='avaliacao')x.valor=avaliacoes[x.idx][1];if(campo==='idx'||campo==='qtd'||campo==='valor')if(x.formas.length===1)x.formas[0].valor=valorItem(x);render()};
-window.pvAdicionarForma=id=>{const fs=id==='plano'?estado.plano:get(id)?.formas;if(fs){fs.push({forma:'Dinheiro',valor:0});render()}};
-window.pvAlterarFormaPlano=(i,c,v)=>{estado.plano[i][c]=c==='valor'?Number(v):v;render()};
-window.pvRemoverFormaPlano=i=>{if(estado.plano.length>1){estado.plano.splice(i,1);render()}};
-window.pvAlterarFormaItem=(id,i,c,v)=>{const x=get(id);if(x){x.formas[i][c]=c==='valor'?Number(v):v;render()}};
-window.pvRemoverFormaItem=(id,i)=>{const x=get(id);if(x&&x.formas.length>1){x.formas.splice(i,1);render()}};
-window.pvSincronizarCatalogos=function(){
- produtosOriginais=window.produtosVitturi||[];avaliacoesOriginais=window.avaliacoesVitturi||[];
- produtos=produtosOriginais.filter(x=>x.ativo!==false).map(x=>[x.nome,Number(x.valor||0)]);
- avaliacoes=avaliacoesOriginais.filter(x=>x.ativo!==false).map(x=>[x.nome,Number(x.valor||0)]);
- produtosOriginais=produtosOriginais.filter(x=>x.ativo!==false);avaliacoesOriginais=avaliacoesOriginais.filter(x=>x.ativo!==false);
- [...estado.vendas,...estado.avaliacoes].forEach(x=>{const lista=x.tipo==='venda'?produtos:avaliacoes;if(x.idx>=lista.length)x.idx=0;if(x.tipo==='avaliacao')x.valor=Number(lista[x.idx]?.[1]||0);if(x.formas.length===1)x.formas[0].valor=valorItem(x)});
- render();
-};
-render();
-})();
-
-</script>
-<script>
-/* V11: validação adicional diretamente no banco, exclusivamente SELECT. */
-window.pvVerificarBancoV11=async function(){
- const msg=document.getElementById('pvConferencia');
- if(!window.pvConferenciaValida){msg.className='status error';msg.textContent='Primeiro clique em CONFERIR ATENDIMENTO.';return;}
- if(typeof sb==='undefined'||!sb){msg.className='status error';msg.textContent='Conexão com Supabase indisponível.';return;}
- if(typeof alunoAtendimento==='undefined'||!alunoAtendimento){msg.className='status error';msg.textContent='Selecione um aluno antes de verificar.';return;}
- msg.className='status';msg.textContent='Consultando cadastro e estoque atuais no Supabase...';
- try{
-   const a=await sb.from('Alunos').select('codigo,nome').eq('codigo',String(alunoAtendimento.codigo)).maybeSingle();
-   if(a.error)throw a.error;
-   if(!a.data)throw Error('Aluno não encontrado no banco.');
-   const quantidades=new Map();
-   const linhas=document.querySelectorAll('#pvProdutos .pv-linha');
-   for(const linha of linhas){
-     const sel=linha.querySelector('select');const qtd=linha.querySelector('input[type="number"]');
-     if(!sel||!qtd)continue;
-     // A lista visual usa índices; o cadastro real é consultado pelo id.
-     const idx=Number(sel.value),catalogo=window.produtosVitturi||[],produto=catalogo[idx];
-     if(!produto)throw Error('Produto não encontrado no catálogo; atualize a conferência.');
-     const n=Number(qtd.value);
-     if(!Number.isInteger(n)||n<1)throw Error('Quantidade inválida para '+produto.nome+'.');
-     quantidades.set(String(produto.id),(quantidades.get(String(produto.id))||0)+n);
-   }
-   if(document.getElementById('pvVendas').checked){
-     for(const [id,qtd] of quantidades){
-       const r=await sb.from('Produtos').select('id,nome,estoque').eq('id',id).maybeSingle();
-       if(r.error)throw r.error;
-       if(!r.data)throw Error('Produto #'+id+' não existe mais no banco.');
-       if(Number(r.data.estoque||0)<qtd)throw Error('Estoque insuficiente no banco para '+r.data.nome+': solicitado '+qtd+', disponível '+Number(r.data.estoque||0)+'.');
-     }
-   }
-   msg.className='status ok';msg.textContent='Consulta concluída: aluno encontrado e estoque consultado. Nenhum pagamento foi salvo e nenhum estoque foi alterado. Esta consulta NÃO reserva estoque nem autoriza gravação.';
- }catch(err){msg.className='status error';msg.textContent='Verificação no Supabase: '+(err.message||String(err))+'. Nenhum dado foi alterado.';}
-};
-</script>
-
-<script>
-window.pvSimularV17=async function(modoGravacao=false){
- const msg=document.getElementById('pvConferencia');
- window.pvConferirAtendimento();
- if(!window.pvConferenciaValida)return;
- if(!window.alunoAtendimento && typeof alunoAtendimento==='undefined'){msg.textContent='Selecione um aluno.';return;}
- try {
-  const payload=window.pvMontarPayloadV12();
-  if(payload.plano){
-   const atual=String(alunoAtendimento?.vencimento_plano||'').slice(0,10);
-   const base=atual && atual>=payload.data_atendimento?atual:payload.data_atendimento;
-   const sugerido=planDueDate(payload.plano.nome,base);
-   const venc=prompt('Confirme o NOVO vencimento do plano (AAAA-MM-DD):',sugerido);
-   if(venc===null)return;
-   if(!/^\d{4}-\d{2}-\d{2}$/.test(venc))throw Error('Vencimento inválido.');
-   payload.plano.vencimento_novo=venc;
-   payload.plano.registrar_retorno=false;
-  }
-  if(document.getElementById('v17Taxa').checked){
-   payload.taxa_matricula={valor:20,formas:[{forma:document.getElementById('v17FormaTaxa').value,valor:20}]};
-   payload.total=Number((payload.total+20).toFixed(2));
-  }
-  const qtd=Number(document.getElementById('v17QtdParcelas').value||0);
-  if(qtd){
-   if(!payload.plano)throw Error('Parcelamento exige plano.');
-   if(!Number.isInteger(qtd)||qtd<2||qtd>24)throw Error('Parcelamento: informe entre 2 e 24 parcelas.');
-   const primeiro=document.getElementById('v17PrimeiroVenc').value;
-   if(!/^\d{4}-\d{2}-\d{2}$/.test(primeiro))throw Error('Informe o primeiro vencimento das parcelas.');
-   if(payload.plano.formas.length!==1||payload.plano.formas[0].forma!=='Crédito parcelado')throw Error('Selecione Crédito parcelado como única forma do plano.');
-   const centavos=Math.round(payload.plano.valor*100);
-   const por=Math.floor(centavos/qtd);
-   const parcelas=[];
-   for(let i=0;i<qtd;i++){
-    const [ano,mes,dia]=primeiro.split('-').map(Number);
-    const ultimo=new Date(Date.UTC(ano,mes+i,0)).getUTCDate();
-    const data=new Date(Date.UTC(ano,mes-1+i,Math.min(dia,ultimo))).toISOString().slice(0,10);
-    parcelas.push({numero:i+1,valor:(i===qtd-1?centavos-por*(qtd-1):por)/100,data_prevista:data});
-   }
-   payload.parcelamento={parcelas};
-  }
-  if(modoGravacao){
-    const resumo='Aluno '+payload.aluno_codigo+' | Total R$ '+Number(payload.total).toFixed(2).replace('.',',')+' | '+(payload.parcelamento?.parcelas.length||0)+' parcela(s).';
-    if(!confirm('CONFIRMAR GRAVAÇÃO REAL?\n'+resumo+'\nA operação não poderá ser desfeita por este botão.'))return;
-  }
-  // A chave permanece no navegador caso a resposta se perca: repetir não duplica.
-  const assinatura=JSON.stringify(payload);
-  let pendente=null;
-  try{pendente=JSON.parse(sessionStorage.getItem('vitturi_v18_pendente')||'null');}catch(_){}
-  if(modoGravacao&&pendente&&pendente.assinatura!==assinatura){
-    throw Error('Há outro atendimento aguardando confirmação. Não inicie outro até conferir o anterior.');
-  }
-  const chave=modoGravacao?(pendente?.chave||crypto.randomUUID()):crypto.randomUUID();
-  if(modoGravacao)sessionStorage.setItem('vitturi_v18_pendente',JSON.stringify({chave,assinatura}));
-  msg.className='status';msg.textContent=modoGravacao?'Enviando confirmação integrada...':'Consultando função V17 sem gravar...';
-  const {data,error}=await sb.rpc('vitturi_confirmar_atendimento_v17',{p_atendimento:payload,p_chave:chave,p_simular:!modoGravacao});
-  if(error)throw error;
-  if(!data||!data.ok)throw Error('Resposta inesperada do Supabase.');
-  if(modoGravacao){
-    if(!['GRAVADO','JA_REGISTRADO'].includes(data.modo))throw Error('Confirmação não reconhecida. Verifique antes de tentar novamente.');
-    sessionStorage.removeItem('vitturi_v18_pendente');
-    msg.className='status ok';msg.textContent='Atendimento registrado: '+data.modo+' · pagamentos '+(data.pagamento_ids||[]).join(', ')+' · R$ '+Number(data.total).toFixed(2).replace('.',',');
-    // Atualiza ficha, catálogo, estoque e painel sem exigir F5. A gravação já foi confirmada.
-    try { await loadAll(); } catch(e) { console.warn('Dados gravados; falha apenas na atualização visual:',e); }
-  }else{
-    if(data.modo!=='SIMULACAO_V17')throw Error('Resposta inesperada do Supabase.');
-    msg.className='status ok';msg.textContent='V17: aluno '+data.aluno_codigo+' · total R$ '+Number(data.total).toFixed(2).replace('.',',')+' · taxa R$ '+Number(data.taxa_matricula).toFixed(2).replace('.',',')+' · '+data.parcelas+' parcela(s). Nenhum dado gravado.';
-  }
- }catch(e){msg.className='status error';msg.textContent='Atendimento: '+(e.message||String(e));}
-};
-window.pvConfirmarV18=()=>window.pvSimularV17(true);
 </script>
 </body>
 </html>
