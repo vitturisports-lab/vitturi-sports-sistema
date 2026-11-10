@@ -263,7 +263,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <div><label>Nome *</label><input id="aNome"></div>
 <div><label>CPF</label><input id="aCpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="this.value=formatarCPF(this.value)"></div>
 <div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
-<div><label>Gênero</label><select id="aGenero"><option value="">Não informado</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+<div><label>Gênero</label><select id="aGenero"><option value="">Selecione</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
 <div><label>Telefone</label><input id="aTel" type="tel" inputmode="tel" maxlength="15" oninput="this.value=formatarTelefone(this.value)"></div>
 <div><label>Data de cadastro (data real de entrada)</label><input id="aCadastro" type="date"></div>
 
@@ -335,7 +335,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px;bord
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
 <section id="vendas" class="tab">
- <div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><button type="button" class="secondary" onclick="carregarVendasPendentes()">ATUALIZAR PENDÊNCIAS</button><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Venda</th><th>Aluno</th><th>Produto</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div>
+ <div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Data da compra</th><th>Aluno</th><th>Produto</th><th style="text-align:center">Quantidade</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div>
 <div class="box"><h2>Vendas</h2>
 <div class="grid2"><div><label>Produto</label><input id="prNome"></div><div><label>Preço de venda (R$)</label><input id="prValor" type="number" step="0.01" min="0"></div></div><br>
 <button class="primary" onclick="addProduto()">ADICIONAR PRODUTO</button>
@@ -818,11 +818,32 @@ async function efetivarVendaPendente22(){
  }catch(e){alert(e.message||String(e))}finally{btn.disabled=false}
 }
 async function carregarVendasPendentes(){
- const msg=document.getElementById('vendasPendentesMensagem'),tbody=document.getElementById('vendasPendentesLista');msg.textContent='Consultando...';
- const {data,error}=await sb.from('Pagamentos').select('id,aluno_codigo,descricao,valor_total,data_vencimento,data_pagamento').eq('tipo','venda').eq('status_recebimento','Pendente').order('data_vencimento',{ascending:true});
- if(error){msg.textContent='Erro ao consultar: '+error.message;return}
- const rows=data||[];msg.textContent=rows.length+' venda(s) pendente(s), total '+money(rows.reduce((a,x)=>a+Number(x.valor_total||0),0))+'.';
- tbody.innerHTML=rows.map(x=>`<tr><td>#${Number(x.id)}</td><td>${esc(alunos.find(a=>String(a.codigo)===String(x.aluno_codigo))?.nome||x.aluno_codigo)}</td><td>${esc(x.descricao)}</td><td>${money(x.valor_total)}</td><td>${dataBR(x.data_vencimento)}</td><td><button type="button" class="secondary" onclick="marcarVendaRecebida(${Number(x.id)})">Marcar como recebido</button></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma venda pendente.</td></tr>';
+ const msg=document.getElementById('vendasPendentesMensagem'),tbody=document.getElementById('vendasPendentesLista');
+ msg.textContent='Consultando vendas pendentes...';tbody.innerHTML='<tr><td colspan="7">Carregando...</td></tr>';
+ try{
+  // Busca paginada: o Supabase limita a quantidade de linhas por resposta.
+  // O mesmo campo status_recebimento utilizado nos Relatórios determina a pendência.
+  const rows=[];const tamanho=500;
+  for(let inicio=0;inicio<50000;inicio+=tamanho){
+   const {data,error}=await sb.from('Pagamentos')
+    .select('id,tipo,aluno_codigo,descricao,valor_total,data_vencimento,data_pagamento,status_recebimento')
+    .order('id',{ascending:false}).range(inicio,inicio+tamanho-1);
+   if(error)throw error;
+   rows.push(...(data||[]).filter(x=>String(x.tipo||'').trim().toLowerCase()==='venda'&&String(x.status_recebimento||'').trim().toLowerCase()==='pendente'));
+   if(!data||data.length<tamanho)break;
+   if(inicio+tamanho>=50000)throw new Error('Consulta ultrapassou o limite de segurança.');
+  }
+  rows.sort((a,b)=>String(a.data_vencimento||'').localeCompare(String(b.data_vencimento||''))||Number(b.id)-Number(a.id));
+  msg.textContent=rows.length+' venda(s) pendente(s), total '+money(rows.reduce((a,x)=>a+Number(x.valor_total||0),0))+'.';
+  // A descrição das vendas recentes pode terminar em "x1", "x2" etc.
+  // Vendas antigas sem quantidade explícita são tratadas como uma unidade.
+  const produtoQuantidade=(descricao)=>{
+   const texto=String(descricao||'').trim();
+   const m=texto.match(/\s+[x×]\s*(\d+)\s*$/i);
+   return {produto:m?texto.slice(0,m.index).trim():texto,quantidade:m?Number(m[1]):1};
+  };
+  tbody.innerHTML=rows.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(alunos.find(a=>String(a.codigo)===String(x.aluno_codigo))?.nome||x.aluno_codigo)}</td><td>${esc(produtoQuantidade(x.descricao).produto)}</td><td style="text-align:center">${produtoQuantidade(x.descricao).quantidade}</td><td>${money(x.valor_total)}</td><td>${dataBR(x.data_vencimento)}</td><td><button type="button" class="secondary" onclick="marcarVendaRecebida(${Number(x.id)})">Marcar como recebido</button></td></tr>`).join('')||'<tr><td colspan="7">Nenhuma venda pendente.</td></tr>';
+ }catch(e){tbody.innerHTML='<tr><td colspan="7">Não foi possível consultar as pendências.</td></tr>';msg.textContent='Erro ao consultar: '+(e.message||String(e));}
 }
 async function marcarVendaRecebida(id){
  const {data:x,error:e}=await sb.from('Pagamentos').select('id,aluno_codigo,descricao,valor_total,status_recebimento').eq('id',id).eq('tipo','venda').single();
@@ -1049,10 +1070,10 @@ async function addProduto(){let nome=document.getElementById('prNome').value.tri
 async function addTipoAvaliacao(){let nome=document.getElementById('avNome').value.trim(),valor=val('avValor');if(!nome)return;let r=await sb.from('tipos_avaliacao').insert({nome,valor,ativo:true});if(r.error){alert(r.error.message);return}document.getElementById('avNome').value='';document.getElementById('avValor').value='';await loadAll()}
 function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('Planos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button> <button class="danger" onclick="excluirCatalogo('Produtos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
-async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML=produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')||'<option value="">Cadastre um produto primeiro</option>';}
+async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML='<option value="">Selecione</option>'+produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');}
 let compraEmEdicao=null;
 function cancelarEdicaoCompra(){
- compraEmEdicao=null;document.getElementById("compSalvarBtn").textContent="REGISTRAR COMPRA";document.getElementById("compCancelarBtn").classList.add("hidden");document.getElementById("compProduto").disabled=false;document.getElementById("compQtd").value=1;document.getElementById("compCusto").value="";document.getElementById("compFornecedor").value="";document.getElementById("compData").value=localDate();
+ compraEmEdicao=null;document.getElementById("compSalvarBtn").textContent="REGISTRAR COMPRA";document.getElementById("compCancelarBtn").classList.add("hidden");document.getElementById("compProduto").disabled=false;document.getElementById("compProduto").value="";document.getElementById("compQtd").value=1;document.getElementById("compCusto").value="";document.getElementById("compFornecedor").value="";document.getElementById("compData").value=localDate();
 }
 async function iniciarEdicaoCompra(id){
  const r=await sb.from("compras_estoque").select("*").eq("id",id).single();if(r.error){alert("Não foi possível abrir a compra: "+r.error.message);return}
@@ -1841,6 +1862,8 @@ function entrarBoasVindas(){
   originalBuscar.apply(this,arguments);
   const atual=String(alunoAtendimento?.codigo||'');
   if(anterior!==atual || !alunoAtendimento){
+   // Novo aluno ou pesquisa limpa: descarta os itens do atendimento anterior.
+   window.int29CancelarAtendimento(false);
    panel.classList.add('hidden');
    gymBox.classList.add('hidden');
    for(const id of ['int24Plano','int24Vendas','int24Avaliacoes'])document.getElementById(id).checked=false;
@@ -1869,14 +1892,14 @@ function entrarBoasVindas(){
   panel.classList.remove('hidden');
   int24Toggle();
  };
- window.int29CancelarAtendimento=function(){
+ window.int29CancelarAtendimento=function(limparAluno=true){
   if(int28Busy)return;
-  // Cancela somente o preenchimento atual. Mantém o aluno selecionado e não grava nada.
+  // Cancela o preenchimento atual e limpa a seleção do aluno, sem gravar nada.
   int28Pending=null;
   const conf=document.getElementById('int24Conferencia');
   conf.classList.add('hidden');conf.replaceChildren();
   int24State.venda=[];int24State.avaliacao=[];
-  int24State.plano=[{pays:[{f:'Dinheiro',v:0,n:1}],lastTotal:null}];
+  int24State.plano=[{pays:[{f:'',v:0,n:1}],lastTotal:null}];
   for(const id of ['int24Plano','int24Vendas','int24Avaliacoes','int24Taxa'])document.getElementById(id).checked=false;
   document.getElementById('int24PersonalValor').value='';
   document.getElementById('int24VendaItens').replaceChildren();
@@ -1887,23 +1910,32 @@ function entrarBoasVindas(){
   document.getElementById('vendaPrazoArea').classList.add('hidden');
   document.getElementById('pMsg').textContent='';
   int24Toggle();
+  if(limparAluno)liberarPesquisaAtendimento();
  };
- window.int24State={venda:[],avaliacao:[],plano:[{pays:[{f:'Dinheiro',v:0,n:1}],lastTotal:null}]};
+ // Ao sair de Manutenção, descarta apenas o rascunho da tela, sem gravar dados.
+ const int32AbaOriginal=window.aba;
+ window.aba=function(id,btn){
+  if(document.getElementById('pagamento').classList.contains('active') && id!=='pagamento'){
+   window.int29CancelarAtendimento();
+  }
+  return int32AbaOriginal.apply(this,arguments);
+ };
+ window.int24State={venda:[],avaliacao:[],plano:[{pays:[{f:'',v:0,n:1}],lastTotal:null}]};
  // Atualiza o valor do Personal após a ficha do aluno ser exibida, evitando preço temporário do plano geral.
  new MutationObserver(()=>{if(alunoAtendimento && !document.getElementById('integrado24').classList.contains('hidden'))int24Refresh();}).observe(document.getElementById('pAluno'),{childList:true,subtree:true});
  window.int24Toggle=function(){
   for(const [check,box] of [['int24Plano','int24PlanoArea'],['int24Vendas','int24VendasArea'],['int24Avaliacoes','int24AvaliacoesArea']])document.getElementById(box).classList.toggle('hidden',!document.getElementById(check).checked);
   const sel=document.getElementById('int24PlanoSelect');const prev=sel.value;
-  sel.innerHTML=planos.filter(x=>x.ativo&&!/taxa de matr[ií]cula/i.test(x.nome)).map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('');if([...sel.options].some(x=>x.value===prev))sel.value=prev;
+  sel.innerHTML='<option value="">Selecione</option>'+planos.filter(x=>x.ativo&&!/taxa de matr[ií]cula/i.test(x.nome)).map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('');if([...sel.options].some(x=>x.value===prev))sel.value=prev;
   if(document.getElementById('int24Vendas').checked&&!int24State.venda.length)int24AddItem('venda');
   if(document.getElementById('int24Avaliacoes').checked&&!int24State.avaliacao.length)int24AddItem('avaliacao');
   int24Refresh();
  };
- window.int24AddItem=function(tipo){int24State[tipo].push({id:'',qtd:1,modo:'agora',venc:'',pays:[{f:'Dinheiro',v:0,n:1}],lastTotal:null});int24RenderItems(tipo)};
+ window.int24AddItem=function(tipo){int24State[tipo].push({id:'',qtd:1,modo:'agora',venc:'',pays:[{f:'',v:0,n:1}],lastTotal:null});int24RenderItems(tipo)};
  window.int24RemoveItem=function(tipo,i){int24State[tipo].splice(i,1);int24RenderItems(tipo)};
- window.int24AddPay=function(tipo,i=0){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.push({f:'Dinheiro',v:0,n:1});int24Refresh()};
+ window.int24AddPay=function(tipo,i=0){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.push({f:'',v:0,n:1});int24Refresh()};
  window.int24PayChange=function(tipo,i,j,field,value){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays[j][field]=field==='v'||field==='n'?Number(value):value;int24Refresh(field!=='v'&&field!=='n');if(field==='v'||field==='n'){const el=document.getElementById('int24parcelas-'+tipo+'-'+i);if(el)el.innerHTML=int24Installments(item)}};
- window.int24PayRemove=function(tipo,i,j){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.splice(j,1);if(!item.pays.length)item.pays.push({f:'Dinheiro',v:0,n:1});int24Refresh()};
+ window.int24PayRemove=function(tipo,i,j){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.splice(j,1);if(!item.pays.length)item.pays.push({f:'',v:0,n:1});int24Refresh()};
  const opts=()=>methods.map(x=>`<option>${esc(x)}</option>`).join('');
  function int24SyncAmount(item,total){
   total=Math.round((Number(total)||0)*100)/100;
@@ -1925,13 +1957,13 @@ function entrarBoasVindas(){
    return '<div style="margin-top:6px">'+n+'x no crédito parcelado — '+money(cents/100)+'</div>'+Array.from({length:n},(_,k)=>'<div class="muted">'+(k+1)+'ª parcela: '+money((base+(k<rest?1:0))/100)+'</div>').join('');
   }).join('')+'</div>';
  }
- function payHtml(tipo,i,item){return item.pays.map((p,j)=>`<div class="int-payrow"><select onchange="int24PayChange('${tipo}',${i},${j},'f',this.value)">${methods.map(x=>`<option ${p.f===x?'selected':''}>${esc(x)}</option>`).join('')}</select><input type="number" min="0" step="0.01" value="${p.v}" oninput="int24PayChange('${tipo}',${i},${j},'v',this.value)">${p.f==='Crédito parcelado'?`<input type="number" min="1" step="1" value="${p.n}" title="Número de parcelas" aria-label="Número de parcelas" oninput="int24PayChange('${tipo}',${i},${j},'n',this.value)">`:''}<button type="button" class="danger" onclick="int24PayRemove('${tipo}',${i},${j})">X</button></div>`).join('')+`<div id="int24parcelas-${tipo}-${i}">${int24Installments(item)}</div>`}
+ function payHtml(tipo,i,item){return item.pays.map((p,j)=>`<div class="int-payrow"><select onchange="int24PayChange('${tipo}',${i},${j},'f',this.value)"><option value="" ${!p.f?'selected':''}>Selecione</option>${methods.map(x=>`<option ${p.f===x?'selected':''}>${esc(x)}</option>`).join('')}</select><input type="number" min="0" step="0.01" value="${p.v}" oninput="int24PayChange('${tipo}',${i},${j},'v',this.value)">${p.f==='Crédito parcelado'?`<input type="number" min="1" step="1" value="${p.n}" title="Número de parcelas" aria-label="Número de parcelas" oninput="int24PayChange('${tipo}',${i},${j},'n',this.value)">`:''}<button type="button" class="danger" onclick="int24PayRemove('${tipo}',${i},${j})">X</button></div>`).join('')+`<div id="int24parcelas-${tipo}-${i}">${int24Installments(item)}</div>`}
 
  window.int24RenderItems=function(tipo){
   const list=document.getElementById(tipo==='venda'?'int24VendaItens':'int24AvaliacaoItens');
   const source=(tipo==='venda'?produtos:tiposAv).filter(x=>x.ativo);
-  list.innerHTML=int24State[tipo].map((item,i)=>`<div class="int-entry"><label>${tipo==='venda'?'Produto':'Avaliação'}</label><select onchange="int24ItemChange('${tipo}',${i},'id',this.value)">${source.map(x=>`<option value="${x.id}" ${String(item.id)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${tipo==='venda'?`<div style="margin-top:10px"><label>Quantidade</label><input type="number" min="1" step="1" value="${item.qtd}" oninput="int24ItemChange('${tipo}',${i},'qtd',this.value)"></div>`:''}<div class="result">Valor total: <b id="int24val-${tipo}-${i}"></b></div><div style="margin-top:12px"><label>Recebimento</label><select onchange="int24ItemChange('${tipo}',${i},'modo',this.value)"><option value="agora" ${item.modo==='agora'?'selected':''}>Pagar agora</option><option value="depois" ${item.modo==='depois'?'selected':''}>Pagar depois</option></select></div><div id="int24venc-${tipo}-${i}" class="${item.modo==='depois'?'':'hidden'}" style="margin-top:10px"><label>Data combinada para pagamento</label><input type="date" value="${item.venc}" onchange="int24ItemChange('${tipo}',${i},'venc',this.value)"></div><div id="int24pay-${tipo}-${i}" class="int-pays ${item.modo==='depois'?'hidden':''}"><h3>Forma de pagamento</h3><div id="int24pays-${tipo}-${i}"></div><button type="button" class="secondary" onclick="int24AddPay('${tipo}',${i})">+ Outra forma de pagamento</button></div><div class="int-actions"><button type="button" class="secondary" onclick="int24RemoveItem('${tipo}',${i})">REMOVER ${tipo==='venda'?'PRODUTO':'AVALIAÇÃO'}</button></div></div>`).join('');
-  int24State[tipo].forEach((item,i)=>{if(!source.some(x=>String(x.id)===String(item.id)))item.id=source[0]?.id||''});int24Refresh();
+  list.innerHTML=int24State[tipo].map((item,i)=>`<div class="int-entry"><label>${tipo==='venda'?'Produto':'Avaliação'}</label><select onchange="int24ItemChange('${tipo}',${i},'id',this.value)"><option value="" ${!item.id?'selected':''}>Selecione</option>${source.map(x=>`<option value="${x.id}" ${String(item.id)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${tipo==='venda'?`<div style="margin-top:10px"><label>Quantidade</label><input type="number" min="1" step="1" value="${item.qtd}" oninput="int24ItemChange('${tipo}',${i},'qtd',this.value)"></div>`:''}<div class="result">Valor total: <b id="int24val-${tipo}-${i}"></b></div><div style="margin-top:12px"><label>Recebimento</label><select onchange="int24ItemChange('${tipo}',${i},'modo',this.value)"><option value="agora" ${item.modo==='agora'?'selected':''}>Pagar agora</option><option value="depois" ${item.modo==='depois'?'selected':''}>Pagar depois</option></select></div><div id="int24venc-${tipo}-${i}" class="${item.modo==='depois'?'':'hidden'}" style="margin-top:10px"><label>Data combinada para pagamento</label><input type="date" value="${item.venc}" onchange="int24ItemChange('${tipo}',${i},'venc',this.value)"></div><div id="int24pay-${tipo}-${i}" class="int-pays ${item.modo==='depois'?'hidden':''}"><h3>Forma de pagamento</h3><div id="int24pays-${tipo}-${i}"></div><button type="button" class="secondary" onclick="int24AddPay('${tipo}',${i})">+ Outra forma de pagamento</button></div><div class="int-actions"><button type="button" class="secondary" onclick="int24RemoveItem('${tipo}',${i})">REMOVER ${tipo==='venda'?'PRODUTO':'AVALIAÇÃO'}</button></div></div>`).join('');
+  int24State[tipo].forEach(item=>{if(item.id&&!source.some(x=>String(x.id)===String(item.id)))item.id=''});int24Refresh();
  };
  window.int24ItemChange=function(tipo,i,k,v){const item=int24State[tipo][i];item[k]=k==='qtd'?Number(v):v;if(k==='modo')int24RenderItems(tipo);else int24Refresh()};
  function itemValue(tipo,item){const src=tipo==='venda'?produtos:tiposAv;const x=src.find(x=>String(x.id)===String(item.id));return Number(x?.valor||0)*(tipo==='venda'?Math.max(1,Number(item.qtd)||1):1)}
