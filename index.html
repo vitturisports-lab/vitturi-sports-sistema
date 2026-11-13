@@ -1814,6 +1814,31 @@ async function excluirVendaPagamento(id){
 }
 
 // Edição e exclusão de Avaliações com confirmação de senha.
+function gerenciarLancamentoAgrupado(mensalidadeId,matriculaId,acaoEscolhida){
+  const antigo=document.getElementById('vsGerenciarAgrupado');
+  if(antigo)antigo.remove();
+  const fundo=document.createElement('div');
+  fundo.id='vsGerenciarAgrupado';
+  fundo.className='senha-modal';
+  fundo.style.zIndex='20500';
+  fundo.innerHTML=`<div class="senha-modal-card" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-label="Gerenciar lançamento agrupado">
+    <h2>${acaoEscolhida==='excluir'?'Excluir':'Editar'} lançamento</h2>
+    <p>Este lançamento reúne mensalidade e Taxa de matrícula. Escolha qual registro deseja ${acaoEscolhida==='excluir'?'excluir':'editar'}. Os registros são independentes no banco de dados.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0"><strong style="min-width:135px">Mensalidade #${mensalidadeId}</strong><button type="button" class="secondary" data-id="${mensalidadeId}" data-acao="editar">Editar</button><button type="button" class="danger" data-id="${mensalidadeId}" data-acao="excluir">Excluir</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0"><strong style="min-width:135px">Taxa #${matriculaId}</strong><button type="button" class="secondary" data-id="${matriculaId}" data-acao="editar">Editar</button><button type="button" class="danger" data-id="${matriculaId}" data-acao="excluir">Excluir</button></div>
+    <div class="senha-modal-acoes"><button type="button" class="secondary" id="vsFecharAgrupado">Fechar</button></div>
+  </div>`;
+  fundo.querySelectorAll('button[data-acao]').forEach(btn=>{if(btn.dataset.acao!==acaoEscolhida)btn.remove();});
+  document.body.appendChild(fundo);
+  fundo.querySelector('#vsFecharAgrupado').addEventListener('click',()=>fundo.remove());
+  fundo.addEventListener('click',e=>{if(e.target===fundo)fundo.remove()});
+  fundo.querySelectorAll('button[data-id]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=Number(btn.dataset.id),acao=btn.dataset.acao;
+    fundo.remove();
+    visualizarAcaoPagamento(id,acao);
+  }));
+}
+
 async function visualizarAcaoPagamento(id,acao){
  if(acao==='excluir'){
   const consulta=await sb.from('Pagamentos').select('tipo').eq('id',id).maybeSingle();
@@ -2199,8 +2224,60 @@ async function gerarRelatorio(){
    if(r.error){document.getElementById('rFiltroInfo').textContent='Não foi possível conferir vínculos das parcelas: '+r.error.message;return;}
    (r.data||[]).forEach(x=>pagamentosComParcelas.add(Number(x.pagamento_id)));
  }
+ // Agrupamento visual apenas com vínculo comprovado pelo atendimento integrado.
+ // Consulta paginada: o Supabase pode limitar a resposta padrão a 1000 linhas.
+ const gruposMatricula=new Map();
+ const matriculasAgrupadas=new Set();
+ const porId=new Map(payments.map(x=>[String(x.id),x]));
+ const normalizaTipo=t=>String(t||'').trim().toLocaleLowerCase('pt-BR');
+ const registraGrupo=registro=>{
+   let vinculados=registro.pagamento_ids;
+   if(typeof vinculados==='string'){try{vinculados=JSON.parse(vinculados)}catch(_){return}}
+   if(!Array.isArray(vinculados)||vinculados.length!==2)return;
+   const itens=vinculados.map(id=>porId.get(String(id)));
+   if(itens.some(x=>!x))return;
+   const mensal=itens.find(x=>normalizaTipo(x.tipo)==='mensalidade');
+   const matricula=itens.find(x=>normalizaTipo(x.tipo)==='taxa de matrícula');
+   if(!mensal||!matricula||String(mensal.id)===String(matricula.id))return;
+   if(String(mensal.aluno_codigo)!==String(matricula.aluno_codigo)||mensal.data_pagamento!==matricula.data_pagamento)return;
+   if(pagamentosComParcelas.has(Number(mensal.id))||pagamentosComParcelas.has(Number(matricula.id)))return;
+   if(gruposMatricula.has(String(mensal.id))||matriculasAgrupadas.has(String(matricula.id)))return;
+   gruposMatricula.set(String(mensal.id),matricula);
+   matriculasAgrupadas.add(String(matricula.id));
+ };
+ try{
+   const inicio=addDaysISO(start,-1)+'T00:00:00';
+   const fim=addDaysISO(end,1)+'T23:59:59';
+   for(let offset=0;offset<10000;offset+=500){
+     const resp=await sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').gte('criado_em',inicio).lte('criado_em',fim).order('criado_em',{ascending:true}).range(offset,offset+499);
+     if(resp.error)break;
+     (resp.data||[]).forEach(registraGrupo);
+     if((resp.data||[]).length<500)break;
+   }
+   // Busca pontual para vínculos não retornados pela listagem, inclusive registros antigos.
+   const pendentes=payments.filter(x=>normalizaTipo(x.tipo)==='mensalidade'&&!gruposMatricula.has(String(x.id))&&
+     payments.some(y=>normalizaTipo(y.tipo)==='taxa de matrícula'&&String(y.aluno_codigo)===String(x.aluno_codigo)&&y.data_pagamento===x.data_pagamento));
+   for(const mensal of pendentes){
+     const resp=await sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').contains('pagamento_ids',[String(mensal.id)]).limit(20);
+     if(!resp.error)(resp.data||[]).forEach(registraGrupo);
+   }
+ }catch(_){/* Sem vínculo confirmado, mantém os lançamentos separados. */}
  const nomeAluno=codigo=>esc(alunos.find(a=>String(a.codigo)===String(codigo))?.nome||'Aluno não localizado');
- const linhasOriginais=payments.filter(x=>!pagamentosComParcelas.has(Number(x.id))).map(x=>({data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao)}${Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula '+money(x.taxa_matricula_valor):''}</td><td>${money(x.valor_total)}</td><td>${x.status_recebimento==='Pendente'?(x.tipo==='Taxa de matrícula'?'<strong>Incluída nas parcelas do cartão</strong>':'<strong>Pendente — vence '+dataBR(x.data_vencimento)+'</strong>'):(forms.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')||'—')}</td><td><button type="button" class="secondary" onclick="visualizarAcaoPagamento(${Number(x.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="visualizarAcaoPagamento(${Number(x.id)},'excluir')">Excluir</button></td></tr>`}));
+ const linhasOriginais=payments.filter(x=>!pagamentosComParcelas.has(Number(x.id))&&!matriculasAgrupadas.has(String(x.id))).map(x=>{
+   const matricula=gruposMatricula.get(String(x.id));
+   const valorExibido=Number(x.valor_total||0)+(matricula?Number(matricula.valor_total||0):0);
+   const formasExibidas=forms.filter(f=>f.pagamento_id===x.id||(matricula&&f.pagamento_id===matricula.id));
+   const formasTotais=new Map();
+   for(const f of formasExibidas){const nome=formaBR(f.forma_pagamento);formasTotais.set(nome,(formasTotais.get(nome)||0)+Number(f.valor||0));}
+   const formaTexto=[...formasTotais].map(([nome])=>esc(nome)).join(' + ')||'—';
+   const descricao=esc(x.descricao)+(matricula?' + Taxa de matrícula':Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula':'');
+   // Um único controle visual; as ações permanecem individuais para evitar exclusão parcial acidental.
+   const acoes=matricula
+     ? `<button type="button" class="secondary" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'excluir')">Excluir</button>`
+     : `<button type="button" class="secondary" onclick="visualizarAcaoPagamento(${Number(x.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="visualizarAcaoPagamento(${Number(x.id)},'excluir')">Excluir</button>`;
+   const pagamentoTexto=x.status_recebimento==='Pendente'?(x.tipo==='Taxa de matrícula'?'<strong>Incluída nas parcelas do cartão</strong>':'<strong>Pendente — vence '+dataBR(x.data_vencimento)+'</strong>'):formaTexto;
+   return {data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${descricao}</td><td>${money(valorExibido)}</td><td>${pagamentoTexto}</td><td>${acoes}</td></tr>`};
+ });
  const parcelasLancadas=parcelasVisiveis.filter(x=>x.data_prevista<=limiteParcelas);
  const linhasParceladas=parcelasLancadas.map(x=>({data:x.data_prevista,html:`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>Crédito parcelado</td><td>Parcela ${Number(x.numero_parcela)}/${Number(x.total_parcelas)}</td><td>${money(x.valor)}</td><td>Crédito parcelado</td><td><button type="button" class="secondary" onclick="editarPlanoParceladoSeguro(${Number(x.pagamento_id)})">Editar</button> <button type="button" class="danger" onclick="excluirPlanoParceladoSeguro(${Number(x.pagamento_id)})">Excluir</button></td></tr>`}));
  document.getElementById('rList').innerHTML=[...linhasOriginais,...linhasParceladas].sort((a,b)=>b.data.localeCompare(a.data)).map(x=>x.html).join('');
