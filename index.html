@@ -281,6 +281,13 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-mes-outro{max-width:380px}
 @media(max-width:750px){#extrato .vs-ex-range-holder{grid-column:span 1}}
 </style>
+<style id="vs-mes-fechado-css">
+.vs-mes-outro[hidden]{display:none!important}
+.vs-mes-trigger{display:block;width:min(380px,100%);text-align:left;border:1px solid #ccd5e3;background:#fff;color:#29415e;border-radius:7px;padding:11px 13px;cursor:pointer;font:inherit;min-height:43px}
+.vs-mes-trigger::after{content:'▾';float:right;color:#2258a4}
+.vs-mes-trigger[aria-expanded="true"]::after{content:'▴'}
+.vs-mes-trigger + .vs-mes-outro{margin-top:6px}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -3131,7 +3138,7 @@ window.vsRangeSync=function(){const a=document.getElementById('rFrom')?.value,b=
 window.vsRangeClose=function(){document.getElementById('vsRangeShade')?.remove()};
 window.vsRangeOpen=function(){
  window.vsRangeClose();const a=document.getElementById('rFrom').value,b=document.getElementById('rTo').value;
- first=a||null;last=b||null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
+ first=null;last=null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
  const shade=document.createElement('div');shade.id='vsRangeShade';shade.className='vs-range-shade';shade.innerHTML='<div class="vs-range-panel" role="dialog" aria-modal="true" aria-label="Escolher período"><div class="vs-range-top"><strong>Escolha o período</strong><button type="button" id="vsRangeExit">Fechar ×</button></div><div class="vs-range-months" id="vsRangeMonths"></div><div class="vs-range-bottom"><span id="vsRangeSummary"></span><button type="button" class="primary" id="vsRangeConfirm">Confirmar</button></div></div>';
  shade.addEventListener('click',e=>{if(e.target===shade)window.vsRangeClose()});document.body.append(shade);
  document.getElementById('vsRangeExit').onclick=window.vsRangeClose;
@@ -3218,18 +3225,25 @@ function render(){const target=document.getElementById('vsExRangeMonths');if(!ta
 <script id="vs-mes-outros-js">(function(){
 'use strict';
 const names=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const full=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function init(wrap){
  const input=document.getElementById(wrap.dataset.monthInput);if(!input)return;
  let year=Number((input.value||'').slice(0,4))||new Date().getFullYear();
  const header=wrap.querySelector('[data-year]'),grid=wrap.querySelector('[data-month-grid]');
+ const trigger=document.createElement('button');trigger.type='button';trigger.className='vs-mes-trigger';trigger.setAttribute('aria-expanded','false');
+ trigger.setAttribute('aria-label','Selecionar mês e ano');
+ wrap.parentNode.insertBefore(trigger,wrap);
+ wrap.hidden=true;
+ function updateLabel(){const val=input.value||'';const m=Number(val.slice(5,7))-1;const y=Number(val.slice(0,4));trigger.textContent=m>=0&&m<12&&y?full[m]+' de '+y:'Escolha o mês e ano';}
+ function close(){wrap.hidden=true;trigger.setAttribute('aria-expanded','false')}
+ function open(){document.querySelectorAll('.vs-mes-outro').forEach(w=>{if(w!==wrap){w.hidden=true;const t=w.previousElementSibling;if(t&&t.classList.contains('vs-mes-trigger'))t.setAttribute('aria-expanded','false')}});wrap.hidden=false;trigger.setAttribute('aria-expanded','true');render()}
+ trigger.addEventListener('click',()=>wrap.hidden?open():close());
  function render(){header.textContent=year;grid.replaceChildren();const selected=input.value;
  names.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.className='secondary vs-mes-opcao';b.textContent=name;
  const value=year+'-'+String(i+1).padStart(2,'0');if(value===selected)b.classList.add('selecionado');
- b.onclick=()=>{input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));render()};grid.append(b)});}
+ b.onclick=()=>{input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));render();close()};grid.append(b)});updateLabel()}
  wrap.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{year+=Number(b.dataset.step);render()}));
- input.addEventListener('change',()=>{const y=Number((input.value||'').slice(0,4));if(y)year=y;render()});
- // Sincroniza também quando a tela define o mês via JavaScript.
- const observer=new MutationObserver(()=>{if(!wrap.isConnected)observer.disconnect()});observer.observe(wrap,{attributes:true});
+ input.addEventListener('change',()=>{const y=Number((input.value||'').slice(0,4));if(y)year=y;render();updateLabel()});
  render();
  }
  document.querySelectorAll('.vs-mes-outro').forEach(init);
