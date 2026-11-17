@@ -283,6 +283,13 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 #rMonthBox .vs-mes-trigger{max-width:360px}
 #rMonthBox .vs-mes-calendario{margin-top:6px}
 </style>
+<style id="vs-padrao-visual-financeiro-2026">
+.vs-money-preview{position:relative}
+.vs-money-preview .vs-money-display{position:absolute;inset:0;display:flex;align-items:center;padding:10px;border:1px solid #ccc;border-radius:7px;background:#fff;color:#202124;pointer-events:none;white-space:nowrap;overflow:hidden}
+.vs-money-preview:not(:focus-within) input{color:transparent!important;caret-color:transparent}
+.vs-money-preview:focus-within .vs-money-display{display:none}
+.vs-money-preview input{position:relative;background:transparent}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -410,7 +417,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <div><label>CPF</label><input id="aCpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="this.value=formatarCPF(this.value)"></div>
 <div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
 <div><label>Gênero</label><select id="aGenero"><option value="">Selecione</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
-<div><label>Telefone</label><input id="aTel" type="tel" inputmode="tel" maxlength="15" oninput="this.value=formatarTelefone(this.value)"></div>
+<div><label>Telefone</label><input id="aTel" placeholder="(00) 00000-0000" type="tel" inputmode="tel" maxlength="15" oninput="this.value=formatarTelefone(this.value)"></div>
 <div><label>Data de cadastro (data real de entrada)</label><input id="aCadastro" type="date"></div>
 
 
@@ -485,7 +492,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 </section>
 
 <section id="planos" class="tab"><div class="box"><h2>Planos</h2>
-<div class="grid2"><div><label>Nome</label><input id="plNome"></div><div><label>Valor</label><input id="plValor" type="number" step="0.01"></div></div><br>
+<div class="grid2"><div><label>Nome</label><input id="plNome"></div><div><label>Valor (R$)</label><input id="plValor" type="number" step="0.01"></div></div><br>
 <button class="primary" onclick="addPlano()">ADICIONAR</button>
 <table><thead><tr><th>ID</th><th>Plano</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaPlanos"></tbody></table></div></section>
 
@@ -507,7 +514,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 </section>
 
 <section id="avaliacoes" class="tab"><div class="box"><h2>Tipos de Avaliação</h2>
-<div class="grid2"><div><label>Nome</label><input id="avNome"></div><div><label>Valor</label><input id="avValor" type="number" step="0.01"></div></div><br>
+<div class="grid2"><div><label>Nome</label><input id="avNome"></div><div><label>Valor (R$)</label><input id="avValor" type="number" step="0.01"></div></div><br>
 <button class="primary" onclick="addTipoAvaliacao()">ADICIONAR</button>
 <table><thead><tr><th>ID</th><th>Avaliação</th><th>Valor</th><th>Ativo</th><th>Ação</th></tr></thead><tbody id="listaAvaliacoes"></tbody></table></div></section>
 
@@ -555,7 +562,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <p class="muted">Os check-ins pertencem ao mês em que ocorreram. O valor só entra nos recebimentos financeiros na data em que o depósito é confirmado.</p>
 <div class="grid2"><div><label for="whMes">Competência (mês dos check-ins)</label><input id="whMes" onchange="carregarWellHub()" type="month" class="hidden"/><div class="vs-mes-calendario vs-mes-outro" data-month-input="whMes"><div class="vs-mes-ano"><button type="button" class="secondary" data-step="-1" aria-label="Ano anterior">‹</button><strong data-year></strong><button type="button" class="secondary" data-step="1" aria-label="Próximo ano">›</button></div><div class="vs-mes-grade" data-month-grid></div></div></div><div><label>Valor previsto pelos check-ins</label><div class="result"><b id="whPrevisto">R$ 0,00</b><div id="whQuantidade" class="muted"></div></div></div></div>
 <div id="whEstado" class="status" aria-live="polite">Selecione uma competência para consultar.</div>
-<div id="whPendente" class="hidden"><div class="grid2"><div><label for="whValorRecebido">Valor efetivamente recebido (R$)</label><input type="number" min="0" step="0.01" id="whValorRecebido"></div><div><label for="whDataRecebimento">Data real do depósito</label><input type="date" id="whDataRecebimento"></div></div><p class="muted">A diferença entre o valor recebido e o previsto será registrada automaticamente. A confirmação exige sua senha.</p><button class="primary" id="whConfirmarBtn" onclick="confirmarRepasseWellHub()">MARCAR COMO RECEBIDO</button></div>
+<div id="whPendente" class="hidden"><div class="grid2"><div><label for="whValorRecebido">Valor efetivamente recebido</label><input type="number" min="0" step="0.01" id="whValorRecebido"></div><div><label for="whDataRecebimento">Data real do depósito</label><input type="date" id="whDataRecebimento"></div></div><p class="muted">A diferença entre o valor recebido e o previsto será registrada automaticamente. A confirmação exige sua senha.</p><button class="primary" id="whConfirmarBtn" onclick="confirmarRepasseWellHub()">MARCAR COMO RECEBIDO</button></div>
 <h3>Histórico de repasses</h3><div style="overflow:auto"><table><thead><tr><th>Competência</th><th>Previsto</th><th>Recebido</th><th>Diferença</th><th>Data do depósito</th><th>Status</th></tr></thead><tbody id="whHistorico"><tr><td colspan="6">Carregando...</td></tr></tbody></table></div>
 </div></section>
 
@@ -563,7 +570,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 
 <section id="rendaExtra" class="tab">
  <div class="box"><h2>Renda Extra</h2><p class="muted">Cadastre cada fonte de renda uma única vez. O cadastro não gera lançamento financeiro automático.</p>
- <div class="grid2"><div><label for="reNome">Nome da renda</label><input id="reNome" placeholder="Ex.: Aluguel de espaço" maxlength="120"></div><div style="align-self:end"><button class="primary" type="button" onclick="reCadastrar()">CADASTRAR RENDA</button></div></div>
+ <div class="grid2"><div><label for="reNome">Nome da renda</label><input id="reNome" maxlength="120"></div><div style="align-self:end"><button class="primary" type="button" onclick="reCadastrar()">CADASTRAR RENDA</button></div></div>
  <div id="reCadastroMsg" class="status" role="status"></div><div style="overflow:auto"><table><thead><tr><th>Renda cadastrada</th><th>Situação</th><th>Ação</th></tr></thead><tbody id="reCatalogo"></tbody></table></div></div>
  <div class="box"><h3>Registrar Recebimento</h3><p class="muted">O valor só entra no financeiro quando o recebimento é registrado.</p>
  <div class="grid"><div><label for="reFonte">Renda cadastrada</label><select id="reFonte"></select></div><div><label for="reData">Data do recebimento</label><input type="date" id="reData"></div><div><label for="reValor">Valor recebido (R$)</label><input type="number" id="reValor" min="0.01" step="0.01" placeholder="0,00"></div></div>
@@ -3267,6 +3274,31 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
 document.addEventListener('click',e=>{if(e.target.closest('#app nav button')||e.target.closest('.vs-sair-menu')||e.target.closest('#rPeriodo'))close()},true);
 new MutationObserver(()=>{if(box.classList.contains('hidden'))close()}).observe(box,{attributes:true,attributeFilter:['class']});
 label();
+})();
+</script>
+<script id="vs-padrao-visual-financeiro-2026-js">
+(function(){
+'use strict';
+const format = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const fixed=['g15','g16','whValorRecebido'];
+function decorate(id){
+ const el=document.getElementById(id);
+ if(!el||el.dataset.vsMoneyPreview)return;
+ const parent=el.parentElement;
+ const wrapper=document.createElement('div');wrapper.className='vs-money-preview';
+ parent.insertBefore(wrapper,el);wrapper.appendChild(el);
+ const display=document.createElement('span');display.className='vs-money-display';wrapper.appendChild(display);
+ const update=()=>{const v=Number(el.value);display.textContent=el.value!==''&&Number.isFinite(v)?format.format(v):'R$ 0,00'};
+ el.addEventListener('input',update);el.addEventListener('change',update);
+ el.addEventListener('blur',update);
+ new MutationObserver(update).observe(el,{attributes:true,attributeFilter:['value']});
+ el.dataset.vsMoneyPreview='1';update();
+ // Existing application assigns .value directly; update on tab navigation and focus.
+ document.addEventListener('click',()=>{if(!wrapper.matches(':focus-within'))update()},true);
+}
+fixed.forEach(decorate);
+const phone=document.getElementById('aTel');if(phone&&!phone.placeholder)phone.placeholder='(00) 00000-0000';
+const renda=document.getElementById('reNome');if(renda)renda.removeAttribute('placeholder');
 })();
 </script>
 </body>
