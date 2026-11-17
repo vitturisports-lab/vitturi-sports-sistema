@@ -290,6 +290,17 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-money-preview:focus-within .vs-money-display{display:none}
 .vs-money-preview input{position:relative;background:transparent}
 </style>
+<style id="vs-padronizacao-monetaria-final-css">
+/* Formatação visual dentro do campo; o input numérico original mantém os cálculos. */
+.vs-money-edit{position:relative;min-width:0;width:100%}
+.vs-money-edit>input{width:100%}
+.vs-money-edit:not(:focus-within)>input{color:transparent!important;caret-color:transparent}
+.vs-money-edit>.vs-money-value{position:absolute;left:11px;right:10px;bottom:1px;height:39px;display:flex;align-items:center;pointer-events:none;color:#202a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-money-edit:focus-within>.vs-money-value{display:none}
+.vs-money-field-label{font-size:11px;font-weight:700;color:#555;display:block;margin:0 0 4px}
+.payment-row,.int-payrow{align-items:end!important}
+.payment-row .vs-money-edit,.int-payrow .vs-money-edit{align-self:end}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -1860,17 +1871,7 @@ function vsImprimirAniversariantes(){
  td:first-child{width:27%;font-weight:800;text-align:center}td:nth-child(2){overflow-wrap:anywhere}
  tbody tr:last-child td{border-bottom:0}
  @media print{body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}.acoes{display:none}.cartaz{margin:0;width:210mm;height:297mm}.mes{font-size:32pt}th{font-size:21pt}td{font-size:16pt}}
- </style><style id="vs-padronizacao-monetaria-final-css">
-/* Campos monetários: número nativo preservado para todas as regras financeiras. */
-.vs-money-edit{position:relative;min-width:0;width:100%}
-.vs-money-edit>input{width:100%}
-.vs-money-edit:not(:focus-within)>input{color:transparent!important;caret-color:transparent}
-.vs-money-edit>.vs-money-value{position:absolute;left:11px;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#202a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vs-money-edit:focus-within>.vs-money-value{display:none}
-.vs-money-field-label{font-size:11px;font-weight:700;color:#555;display:block;margin:0 0 4px}
-.payment-row,.int-payrow{align-items:end!important}
-.payment-row .vs-money-edit,.int-payrow .vs-money-edit{align-self:end}
-</style>
+ </style>
 </head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div>
 
 
@@ -3331,10 +3332,10 @@ function wrap(input,caption){
 }
 fixedIds.forEach(id=>wrap(document.getElementById(id)));
 function dynamic(){
- document.querySelectorAll('.payment-row input[aria-label="Valor nesta forma"]').forEach(x=>wrap(x,'Valor do pagamento (R$)'));
+ document.querySelectorAll('.payment-row input[aria-label="Valor nesta forma"]').forEach(x=>wrap(x,'Valor (R$)'));
  document.querySelectorAll('.int-payrow input[type="number"]').forEach(x=>{
   if(x.getAttribute('aria-label')==='Número de parcelas')return;
-  if(x.getAttribute('step')==='0.01')wrap(x,'Valor do pagamento (R$)');
+  if(x.getAttribute('step')==='0.01')wrap(x,'Valor (R$)');
  });
 }
 dynamic();
