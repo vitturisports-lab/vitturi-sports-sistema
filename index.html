@@ -245,6 +245,26 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-mes-opcao{padding:11px 5px!important;text-align:center;cursor:pointer}
 .vs-mes-opcao.selecionado{background:#2258a4!important;color:#fff!important;font-weight:bold}
 </style>
+<style id="vs-range-reports-css">
+#relatorios .vs-range-holder{grid-column:span 2;position:relative}
+#relatorios .vs-range-trigger{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:43px;border:1px solid #ccd5e3;background:#fff;border-radius:7px;padding:10px 13px;color:#29415e;cursor:pointer;text-align:left;font-size:14px}
+#relatorios .vs-range-trigger:hover{border-color:#245ba7}
+.vs-range-shade{position:fixed;inset:0;background:#0006;z-index:24000;display:flex;align-items:center;justify-content:center;padding:12px}
+.vs-range-panel{width:min(760px,100%);max-height:92vh;overflow:auto;background:white;border-radius:12px;box-shadow:0 12px 40px #0003;padding:17px;color:#233348}
+.vs-range-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.vs-range-top button,.vs-range-nav button{border:0;background:#edf2f8;color:#1b4b85;border-radius:6px;padding:7px 11px;cursor:pointer}
+.vs-range-months{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vs-range-nav{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:12px}
+.vs-range-nav select{width:auto;max-width:54%;padding:5px;font-size:13px}
+.vs-range-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.vs-range-grid .vs-range-week{font-size:12px;color:#6b778a;text-align:center;padding:7px 0}
+.vs-range-day{min-width:0;border:0;border-radius:5px;padding:10px 0;background:transparent;cursor:pointer;color:#233348;font-size:13px}
+.vs-range-day:hover{background:#dfeaff}.vs-range-day.selected{background:#2258a4!important;color:white!important;font-weight:bold}.vs-range-day.between{background:#e9f1ff}
+.vs-range-day:disabled{visibility:hidden}
+.vs-range-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;border-top:1px solid #e5eaf1;padding-top:14px;flex-wrap:wrap}
+.vs-range-bottom .primary{background:#2258a4;border:0;border-radius:7px;padding:10px 16px;color:white;cursor:pointer}
+@media(max-width:650px){#relatorios .vs-range-holder{grid-column:span 1}.vs-range-months{grid-template-columns:1fr}.vs-range-panel{padding:12px}.vs-range-day{padding:8px 0}}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -475,8 +495,8 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 
 <section id="relatorios" class="tab"><div class="box"><h2>Relatórios</h2>
 <div class="grid"><div><label>Período</label><select id="rPeriodo" onchange="toggleCustom();gerarRelatorio()"><option value="today">Hoje</option><option value="month">Mês atual</option><option value="custom">Período personalizado</option><option value="specific_month">Mês específico</option></select></div>
-<div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" class="hidden" onchange="gerarRelatorio()"><div class="vs-mes-calendario"><div class="vs-mes-ano"><button type="button" class="secondary" onclick="vsMudarAno(-1)" aria-label="Ano anterior">‹</button><strong id="vsAnoSelecionado"></strong><button type="button" class="secondary" onclick="vsMudarAno(1)" aria-label="Próximo ano">›</button></div><div class="vs-mes-grade" id="vsGradeMeses"></div></div></div><div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
-<div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
+<div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" class="hidden" onchange="gerarRelatorio()"><div class="vs-mes-calendario"><div class="vs-mes-ano"><button type="button" class="secondary" onclick="vsMudarAno(-1)" aria-label="Ano anterior">‹</button><strong id="vsAnoSelecionado"></strong><button type="button" class="secondary" onclick="vsMudarAno(1)" aria-label="Próximo ano">›</button></div><div class="vs-mes-grade" id="vsGradeMeses"></div></div></div><div id="rFromBox" class="hidden vs-range-holder"><label>Período personalizado</label><button type="button" id="vsRangeTrigger" class="vs-range-trigger" onclick="vsRangeOpen()"><span id="vsRangeText">Escolha a data de início — Escolha a data final</span><span aria-hidden="true">▦</span></button><input id="rFrom" type="date" class="hidden" onchange="vsRangeSync();gerarRelatorio()"><input id="rTo" type="date" class="hidden" onchange="vsRangeSync();gerarRelatorio()"></div>
+<div id="rToBox" class="hidden"></div></div>
 <div style="margin-top:14px"><label for="rAlunoBusca">Pesquisar pagamentos por código ou nome do aluno</label><input id="rAlunoBusca" placeholder="Digite o código ou nome; deixe vazio para todos" oninput="gerarRelatorio()"><p id="rFiltroInfo" class="muted">Exibindo pagamentos de todos os alunos.</p></div>
  <div class="cards" style="margin-top:14px"><div class="card"><small>Total de lançamentos (inclui pendentes)</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Renda Extra</small><b id="rRendaExtra">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Taxa de matrícula</small><b id="rTaxa">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
 <div class="cards" style="margin-top:12px"><div class="card"><small>Compras de estoque no período</small><b id="rCompras">R$ 0,00</b></div><div class="card"><small>Custo dos produtos vendidos</small><b id="rCustoVendas">R$ 0,00</b></div><div class="card"><small>Lucro bruto estimado (vendas com estoque)</small><b id="rLucroBruto">R$ 0,00</b></div><div class="card"><small>Observação</small><div class="muted" style="margin-top:8px">Não inclui aluguel, salários ou outras despesas.</div></div></div>
@@ -1815,7 +1835,42 @@ function vsImprimirAniversariantes(){
  td:first-child{width:27%;font-weight:800;text-align:center}td:nth-child(2){overflow-wrap:anywhere}
  tbody tr:last-child td{border-bottom:0}
  @media print{body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}.acoes{display:none}.cartaz{margin:0;width:210mm;height:297mm}.mes{font-size:32pt}th{font-size:21pt}td{font-size:16pt}}
- </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div></body></html>`);janela.document.close();
+ </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div><script id="vs-range-reports-js">
+(function(){
+let year,month,first=null,last=null;
+const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const pad=n=>String(n).padStart(2,'0');
+const iso=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+const br=v=>v?v.slice(8,10)+'/'+v.slice(5,7)+'/'+v.slice(0,4):'Escolha a data';
+const shift=(y,m,delta)=>{const d=new Date(y,m+delta,1);return [d.getFullYear(),d.getMonth()]};
+window.vsRangeSync=function(){const a=document.getElementById('rFrom')?.value,b=document.getElementById('rTo')?.value,t=document.getElementById('vsRangeText');if(t)t.textContent=a&&b?br(a)+' — '+br(b):'Escolha a data de início — Escolha a data final'};
+window.vsRangeClose=function(){document.getElementById('vsRangeShade')?.remove()};
+window.vsRangeOpen=function(){
+ window.vsRangeClose();const a=document.getElementById('rFrom').value,b=document.getElementById('rTo').value;
+ first=a||null;last=b||null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
+ const shade=document.createElement('div');shade.id='vsRangeShade';shade.className='vs-range-shade';shade.innerHTML='<div class="vs-range-panel" role="dialog" aria-modal="true" aria-label="Escolher período"><div class="vs-range-top"><strong>Escolha o período</strong><button type="button" id="vsRangeExit">Fechar ×</button></div><div class="vs-range-months" id="vsRangeMonths"></div><div class="vs-range-bottom"><span id="vsRangeSummary"></span><button type="button" class="primary" id="vsRangeConfirm">Confirmar</button></div></div>';
+ shade.addEventListener('click',e=>{if(e.target===shade)window.vsRangeClose()});document.body.append(shade);
+ document.getElementById('vsRangeExit').onclick=window.vsRangeClose;
+ document.getElementById('vsRangeConfirm').onclick=()=>{if(!first)return;const from=first,to=last||first;document.getElementById('rFrom').value=from;document.getElementById('rTo').value=to;window.vsRangeSync();window.vsRangeClose();if(typeof gerarRelatorio==='function')gerarRelatorio()};
+ render();
+};
+function render(){const target=document.getElementById('vsRangeMonths');if(!target)return;target.replaceChildren();
+ for(let idx=0;idx<2;idx++){
+ const [y,m]=shift(year,month,idx);const wrap=document.createElement('div');
+ const nav=document.createElement('div');nav.className='vs-range-nav';
+ const prev=document.createElement('button');prev.type='button';prev.textContent=idx===0?'‹':'«';prev.title='Mês anterior';prev.onclick=()=>{[year,month]=shift(year,month,idx===0?-1:-12);render()};nav.append(prev);
+ const selM=document.createElement('select');months.forEach((name,i)=>{const op=new Option(name,i,i===m,i===m);selM.add(op)});selM.onchange=()=>{[year,month]=shift(y,Number(selM.value),-idx);render()};nav.append(selM);
+ const selY=document.createElement('select');for(let yy=y-20;yy<=y+20;yy++){const op=new Option(String(yy),String(yy),yy===y,yy===y);selY.add(op)}selY.onchange=()=>{[year,month]=shift(Number(selY.value),m,-idx);render()};nav.append(selY);
+ const next=document.createElement('button');next.type='button';next.textContent=idx===1?'›':'»';next.title='Próximo mês';next.onclick=()=>{[year,month]=shift(year,month,idx===1?1:12);render()};nav.append(next);wrap.append(nav);
+ const grid=document.createElement('div');grid.className='vs-range-grid';['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].forEach(t=>{const el=document.createElement('span');el.className='vs-range-week';el.textContent=t;grid.append(el)});
+ const offset=(new Date(y,m,1).getDay()+6)%7;for(let j=0;j<offset;j++){const empty=document.createElement('span');grid.append(empty)}
+ const days=new Date(y,m+1,0).getDate();for(let day=1;day<=days;day++){const val=iso(y,m,day),btn=document.createElement('button');btn.type='button';btn.className='vs-range-day';btn.textContent=day;if(val===first||val===last)btn.classList.add('selected');else if(first&&last&&val>first&&val<last)btn.classList.add('between');btn.onclick=()=>{if(!first||last){first=val;last=null}else if(val<first){last=first;first=val}else{last=val}render()};grid.append(btn)}wrap.append(grid);target.append(wrap);
+ }
+ const summary=document.getElementById('vsRangeSummary');summary.textContent=first?(br(first)+' — '+(last?br(last):'Selecione o final (ou clique novamente no mesmo dia)')):'Selecione a data de início';
+}
+})();
+</script>
+</body></html>`);janela.document.close();
  vsAnivAvisoNovo='';const aviso=document.getElementById('vsAnivAviso');if(aviso){aviso.textContent='Cartaz aberto para impressão.';aviso.classList.remove('warn')}
 }
 
