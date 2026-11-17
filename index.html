@@ -265,6 +265,16 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-range-bottom .primary{background:#2258a4;border:0;border-radius:7px;padding:10px 16px;color:white;cursor:pointer}
 @media(max-width:650px){#relatorios .vs-range-holder{grid-column:span 1}.vs-range-months{grid-template-columns:1fr}.vs-range-panel{padding:12px}.vs-range-day{padding:8px 0}}
 </style>
+<style id="vs-calendario-unico-css">
+.vs-date-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:25000;display:flex;align-items:center;justify-content:center;padding:12px}
+.vs-date-dialog{background:#fff;border-radius:12px;width:min(390px,100%);padding:18px;box-shadow:0 12px 35px #0003;color:#24354d}
+.vs-date-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}.vs-date-head strong{font-size:16px}
+.vs-date-controls{display:flex;align-items:center;gap:7px;margin-bottom:12px}.vs-date-controls select{min-width:0;flex:1;padding:8px;font-size:14px}.vs-date-controls button{border:0;border-radius:6px;background:#edf2f8;color:#164983;padding:9px;cursor:pointer}
+.vs-date-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.vs-date-week{text-align:center;color:#6d7c91;font-size:12px;padding:8px 0}
+.vs-date-cell{border:0;background:transparent;border-radius:7px;cursor:pointer;padding:11px 0;color:#263750}.vs-date-cell:hover{background:#e5effd}.vs-date-cell.active{background:#2258a4;color:white;font-weight:bold}.vs-date-cell:disabled{visibility:hidden}
+.vs-date-foot{display:flex;justify-content:space-between;align-items:center;margin-top:15px;border-top:1px solid #e7ecf3;padding-top:12px;gap:8px}.vs-date-foot button{border:0;background:#edf2f8;border-radius:7px;padding:9px 13px;cursor:pointer;color:#2258a4}
+@media(max-width:500px){.vs-date-dialog{padding:13px}}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -1836,6 +1846,31 @@ function vsImprimirAniversariantes(){
  tbody tr:last-child td{border-bottom:0}
  @media print{body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}.acoes{display:none}.cartaz{margin:0;width:210mm;height:297mm}.mes{font-size:32pt}th{font-size:21pt}td{font-size:16pt}}
  </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div>
+<script id="vs-calendario-unico-js">
+/* Calendário de um dia, independente dos relatórios de intervalo. */
+(function(){
+'use strict';
+const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+let target=null, overlay=null, year=0, month=0;
+function localDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return null;const [y,m,d]=value.split('-').map(Number);const x=new Date(y,m-1,d);return x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d?x:null;}
+function iso(y,m,d){return String(y).padStart(4,'0')+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+function close(){if(overlay)overlay.remove();overlay=null;target=null;}
+function render(){if(!overlay||!target)return;const dlg=overlay.querySelector('.vs-date-dialog');const selected=localDate(target.value);
+ const yearOptions=Array.from({length:201},(_,i)=>1900+i).map(y=>'<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>').join('');
+ dlg.innerHTML='<div class="vs-date-head"><strong>Escolha a data</strong><button type="button" class="secondary" data-action="close">Fechar ×</button></div>'+
+ '<div class="vs-date-controls"><button type="button" data-action="prev" aria-label="Mês anterior">‹</button><select aria-label="Mês" data-action="month">'+months.map((name,i)=>'<option value="'+i+'"'+(i===month?' selected':'')+'>'+name+'</option>').join('')+'</select><select aria-label="Ano" data-action="year">'+yearOptions+'</select><button type="button" data-action="next" aria-label="Próximo mês">›</button></div>'+
+ '<div class="vs-date-grid">'+['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>'<div class="vs-date-week">'+x+'</div>').join('')+
+ Array.from({length:(new Date(year,month,1).getDay()+6)%7},()=>'<span></span>').join('')+
+ Array.from({length:new Date(year,month+1,0).getDate()},(_,i)=>{const d=i+1;const value=iso(year,month,d);return '<button type="button" class="vs-date-cell'+(selected&&target.value===value?' active':'')+'" data-day="'+d+'">'+d+'</button>';}).join('')+'</div>'+
+ '<div class="vs-date-foot"><button type="button" data-action="clear">Limpar</button><button type="button" data-action="today">Hoje</button></div>';
+}
+function open(input){if(overlay&&target===input)return;close();target=input;const dt=localDate(input.value)||new Date();year=dt.getFullYear();month=dt.getMonth();overlay=document.createElement('div');overlay.className='vs-date-backdrop';overlay.innerHTML='<div class="vs-date-dialog" role="dialog" aria-modal="true" aria-label="Selecionar data"></div>';document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay){close();return;}const btn=e.target.closest('button');if(!btn)return;const action=btn.dataset.action;if(action==='close'){close();return;}if(action==='prev'||action==='next'){const d=new Date(year,month+(action==='prev'?-1:1),1);year=d.getFullYear();month=d.getMonth();render();return;}if(action==='clear'){setValue('');return;}if(action==='today'){const d=new Date();setValue(iso(d.getFullYear(),d.getMonth(),d.getDate()));return;}if(btn.dataset.day){setValue(iso(year,month,Number(btn.dataset.day)));}});overlay.addEventListener('change',e=>{if(e.target.dataset.action==='month')month=Number(e.target.value);if(e.target.dataset.action==='year')year=Number(e.target.value);render();});render();}
+function setValue(value){const el=target;close();if(!el)return;el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
+/* Captura também os campos de data criados dinamicamente por edições. */
+document.addEventListener('pointerdown',function(e){const input=e.target.closest&&e.target.closest('input[type="date"]');if(!input||input.disabled||input.closest('.vs-range-shade'))return;e.preventDefault();open(input);},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){close();return;}const input=e.target.closest&&e.target.closest('input[type="date"]');if(input&&!input.disabled&&(e.key==='Enter'||e.key===' '||e.key==='ArrowDown')){e.preventDefault();open(input);}},true);
+})();
+</script>
 </body></html>`);janela.document.close();
  vsAnivAvisoNovo='';const aviso=document.getElementById('vsAnivAviso');if(aviso){aviso.textContent='Cartaz aberto para impressão.';aviso.classList.remove('warn')}
 }
