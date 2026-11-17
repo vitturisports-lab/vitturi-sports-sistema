@@ -2977,12 +2977,33 @@ async function reCarregar(){
  const [f,r]=await Promise.all([sb.from('rendas_extras').select('id,nome,ativa').order('nome'),sb.from('renda_extra_recebimentos').select('id,renda_id,descricao,data_recebimento,valor,formas_recebimento').gte('data_recebimento',reEl('reMes').value+'-01').lt('data_recebimento',addMonthsISO(reEl('reMes').value+'-01',1)).order('data_recebimento',{ascending:false})]);
  if(f.error||r.error){reMsg('reCadastroMsg','Para ativar Renda Extra, execute primeiro o SQL da Etapa 31 no Supabase. '+(f.error||r.error).message);return}
  reMsg('reCadastroMsg','');reFontes=f.data||[];reRecebimentos=r.data||[];
- reEl('reCatalogo').innerHTML=reFontes.map(x=>`<tr><td>${reSafe(x.nome)}</td><td>${x.ativa?'Ativa':'Inativa'}</td><td><button class="secondary" onclick="reAlternar('${x.id}',${!x.ativa})">${x.ativa?'DESATIVAR':'REATIVAR'}</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma renda cadastrada.</td></tr>';
+ reEl('reCatalogo').innerHTML=reFontes.map(x=>`<tr><td>${reSafe(x.nome)}</td><td>${x.ativa?'Ativa':'Inativa'}</td><td><button class="secondary" onclick="reEditarFonte('${x.id}')">EDITAR</button> <button class="danger" onclick="reExcluirFonte('${x.id}')">EXCLUIR</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma renda cadastrada.</td></tr>';
  reEl('reFonte').innerHTML='<option value="">Selecione</option>'+reFontes.filter(x=>x.ativa).map(x=>`<option value="${x.id}">${reSafe(x.nome)}</option>`).join('');
  reEl('reHistorico').innerHTML=reRecebimentos.map(x=>`<tr><td>${dataBR(x.data_recebimento)}</td><td>${reSafe(x.descricao)}</td><td>${money(x.valor)}</td><td>${reSafe(reDescreverFormas(x.formas_recebimento))}</td><td><button class="secondary" onclick="reEditar('${x.id}')">EDITAR</button> <button class="danger" onclick="reExcluir('${x.id}')">EXCLUIR</button></td></tr>`).join('')||'<tr><td colspan="5">Nenhum recebimento no mês.</td></tr>';
  reEl('reTotal').textContent=money(reRecebimentos.reduce((a,x)=>a+Number(x.valor||0),0));
 }
 async function reCadastrar(){const nome=reEl('reNome').value.trim();if(!nome){reMsg('reCadastroMsg','Informe o nome da renda.');return}const {error}=await sb.from('rendas_extras').insert({nome});if(error){reMsg('reCadastroMsg','Não foi possível cadastrar: '+error.message);return}reEl('reNome').value='';await reCarregar();reMsg('reCadastroMsg','Renda cadastrada. Nenhum recebimento foi lançado.');}
+async function reEditarFonte(id){
+ const fonte=reFontes.find(x=>String(x.id)===String(id));if(!fonte)return;
+ const nome=prompt('Editar nome da renda:',fonte.nome);if(nome===null)return;
+ const novo=nome.trim();if(!novo){alert('Informe o nome da renda.');return}
+ if(novo===fonte.nome)return;
+ if(!await reAutorizar())return;
+ const {error}=await sb.from('rendas_extras').update({nome:novo}).eq('id',id);
+ if(error){alert('Não foi possível editar: '+error.message);return}
+ await reCarregar();
+}
+async function reExcluirFonte(id){
+ const fonte=reFontes.find(x=>String(x.id)===String(id));if(!fonte)return;
+ const {count,error:checkError}=await sb.from('renda_extra_recebimentos').select('id',{count:'exact',head:true}).eq('renda_id',id);
+ if(checkError){alert('Não foi possível verificar os recebimentos: '+checkError.message);return}
+ if(count>0){alert('Esta renda possui '+count+' recebimento(s) vinculado(s). Para preservar o histórico financeiro, exclua os recebimentos antes de excluir o cadastro.');return}
+ if(!confirm('Excluir definitivamente a renda "'+fonte.nome+'"?'))return;
+ if(!await reAutorizar())return;
+ const {error}=await sb.from('rendas_extras').delete().eq('id',id);
+ if(error){alert('Não foi possível excluir: '+error.message);return}
+ await reCarregar();
+}
 async function reAlternar(id,ativa){const {error}=await sb.from('rendas_extras').update({ativa}).eq('id',id);if(error){alert(error.message);return}await reCarregar()}
 const reFormasDisponiveis=['Dinheiro','PIX Academia','PIX Eliane','PIX Stéfano','Débito','Crédito','Crédito parcelado','Outra'];
 function reAtualizarFormas(){const misto=reEl('reForma').value==='Misto';reEl('reMistoBox').style.display=misto?'block':'none';reEl('reParcelasBox').style.display=reEl('reForma').value==='Crédito parcelado'?'block':'none';if(misto&&!reEl('reMistoLinhas').children.length){reAdicionarForma();reAdicionarForma()}}
@@ -3199,7 +3220,7 @@ window.vsExRangeSync=function(){const a=document.getElementById('exInicio')?.val
 window.vsExRangeClose=function(){document.getElementById('vsExRangeShade')?.remove()};
 window.vsExRangeOpen=function(){
  window.vsExRangeClose();const a=document.getElementById('exInicio').value,b=document.getElementById('exFim').value;
- first=a||null;last=b||null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
+ first=null;last=null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
  const shade=document.createElement('div');shade.id='vsExRangeShade';shade.className='vs-range-shade';shade.innerHTML='<div class="vs-range-panel" role="dialog" aria-modal="true" aria-label="Escolher período"><div class="vs-range-top"><strong>Escolha o período</strong><button type="button" id="vsExRangeExit">Fechar ×</button></div><div class="vs-range-months" id="vsExRangeMonths"></div><div class="vs-range-bottom"><span id="vsExRangeSummary"></span><button type="button" class="primary" id="vsExRangeConfirm">Confirmar</button></div></div>';
  shade.addEventListener('click',e=>{if(e.target===shade)window.vsExRangeClose()});document.body.append(shade);
  document.getElementById('vsExRangeExit').onclick=window.vsExRangeClose;
@@ -3247,6 +3268,10 @@ function init(wrap){
  render();
  }
  document.querySelectorAll('.vs-mes-outro').forEach(init);
+ function closeAllMonthPickers(){document.querySelectorAll('.vs-mes-outro').forEach(w=>{w.hidden=true;const t=w.previousElementSibling;if(t&&t.classList.contains('vs-mes-trigger'))t.setAttribute('aria-expanded','false')})}
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('.vs-mes-outro')&&!e.target.closest('.vs-mes-trigger'))closeAllMonthPickers()},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAllMonthPickers()},true);
+ document.addEventListener('click',e=>{if(e.target.closest('#app nav button')||e.target.closest('.vs-sair-menu'))closeAllMonthPickers()},true);
 })();</script>
 </body>
 </html>
