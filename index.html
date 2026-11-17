@@ -237,6 +237,14 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 #inicio .vs-details td,#inicio .vs-details th{padding:11px 13px;border-bottom:1px solid #e5eaf1}
 #inicio .vs-alert[aria-expanded="true"]{outline:2px solid #3b6caa;outline-offset:2px}
 </style>
+<style id="vs-calendario-mensal-restaurado">
+.vs-mes-calendario{border:1px solid #d9e2ee;border-radius:10px;padding:12px;background:white;max-width:360px}
+.vs-mes-ano{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.vs-mes-ano button{font-size:23px;line-height:1;padding:5px 15px}
+.vs-mes-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.vs-mes-opcao{padding:11px 5px!important;text-align:center;cursor:pointer}
+.vs-mes-opcao.selecionado{background:#2258a4!important;color:#fff!important;font-weight:bold}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -453,6 +461,10 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <p class="muted">Registre cada compra separadamente. Se o fornecedor ou o custo mudar, basta lançar uma nova compra.</p>
 <div class="grid"><div><label>Produto</label><select id="compProduto"></select></div><div><label>Quantidade comprada</label><input id="compQtd" type="number" min="1" step="1" value="1"></div><div><label>Custo por unidade (R$)</label><input id="compCusto" type="number" min="0.01" step="0.01"></div><div><label>Data da compra</label><input id="compData" type="date"></div><div><label>Fornecedor</label><input id="compFornecedor" placeholder="Nome do fornecedor"></div></div><br>
 <button class="primary" id="compSalvarBtn" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button> <button class="secondary hidden" id="compCancelarBtn" onclick="cancelarEdicaoCompra()">CANCELAR EDIÇÃO</button><div id="compMsg" class="status"></div></div>
+<div class="box"><h2>Registrar retirada</h2>
+<div class="grid"><div><label>Produto</label><select id="retProduto"></select></div><div><label>Data da retirada</label><input id="retData" type="date"></div><div><label>Quantidade retirada</label><input id="retQtd" type="number" min="1" step="1" value="1"></div><div><label>Motivo</label><select id="retMotivo" onchange="document.getElementById('retOutroBox').classList.toggle('hidden',this.value!=='Outro')"><option value="">Selecione</option><option>Vencimento</option><option>Produto danificado</option><option>Consumo próprio</option><option>Outro</option></select></div><div id="retOutroBox" class="hidden"><label>Especifique o motivo</label><input id="retOutro" maxlength="200" placeholder="Informe o motivo"></div></div><br>
+<button class="primary" id="retSalvarBtn" onclick="registrarRetiradaEstoque()">REGISTRAR RETIRADA</button><div id="retMsg" class="status" aria-live="polite"></div></div>
+<div class="box"><h2>Histórico de retiradas</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody id="listaRetiradas"></tbody></table></div></div>
 <div class="box"><h2>Histórico de compras</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Custo unitário</th><th>Total</th><th>Fornecedor</th><th>Ação</th></tr></thead><tbody id="listaCompras"></tbody></table></div></div>
 </section>
 
@@ -463,7 +475,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 
 <section id="relatorios" class="tab"><div class="box"><h2>Relatórios</h2>
 <div class="grid"><div><label>Período</label><select id="rPeriodo" onchange="toggleCustom();gerarRelatorio()"><option value="today">Hoje</option><option value="month">Mês atual</option><option value="custom">Período personalizado</option><option value="specific_month">Mês específico</option></select></div>
-<div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" onchange="gerarRelatorio()"></div><div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
+<div id="rMonthBox" class="hidden"><label>Mês e ano</label><input id="rMonth" type="month" class="hidden" onchange="gerarRelatorio()"><div class="vs-mes-calendario"><div class="vs-mes-ano"><button type="button" class="secondary" onclick="vsMudarAno(-1)" aria-label="Ano anterior">‹</button><strong id="vsAnoSelecionado"></strong><button type="button" class="secondary" onclick="vsMudarAno(1)" aria-label="Próximo ano">›</button></div><div class="vs-mes-grade" id="vsGradeMeses"></div></div></div><div id="rFromBox" class="hidden"><label>De</label><input id="rFrom" type="date" onchange="gerarRelatorio()"></div>
 <div id="rToBox" class="hidden"><label>Até</label><input id="rTo" type="date" onchange="gerarRelatorio()"></div></div>
 <div style="margin-top:14px"><label for="rAlunoBusca">Pesquisar pagamentos por código ou nome do aluno</label><input id="rAlunoBusca" placeholder="Digite o código ou nome; deixe vazio para todos" oninput="gerarRelatorio()"><p id="rFiltroInfo" class="muted">Exibindo pagamentos de todos os alunos.</p></div>
  <div class="cards" style="margin-top:14px"><div class="card"><small>Total de lançamentos (inclui pendentes)</small><b id="rTotal">R$ 0,00</b></div><div class="card"><small>Renda Extra</small><b id="rRendaExtra">R$ 0,00</b></div><div class="card"><small>Mensalidades</small><b id="rMens">R$ 0,00</b></div><div class="card"><small>Taxa de matrícula</small><b id="rTaxa">R$ 0,00</b></div><div class="card"><small>Vendas</small><b id="rVendas">R$ 0,00</b></div><div class="card"><small>Avaliações</small><b id="rAv">R$ 0,00</b></div></div>
@@ -477,7 +489,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <div class="card"><small>Parcelas recebidas no período</small><b id="rParcelasRecebidas">R$ 0,00</b></div><div class="card"><small>WellHub depositado no período</small><b id="rWellHubRecebido">R$ 0,00</b></div>
 </div><p id="rFinanceiroInfo" class="muted"></p>
 <h3>Formas de pagamento</h3><div id="rMethods" class="muted"></div>
-<h3>Renda Extra — recebimentos no período</h3><div id="rRendaExtraInfo" class="muted">Nenhum recebimento no período.</div><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor recebido</th><th>Forma de recebimento</th></tr></thead><tbody id="rRendaExtraLista"></tbody></table></div><h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Descrição</th><th>Valor</th><th>Pagamento</th><th>Ações</th></tr></thead><tbody id="rList"></tbody></table></div>
+<h3>Renda Extra — recebimentos no período</h3><div id="rRendaExtraInfo" class="muted">Nenhum recebimento no período.</div><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Descrição</th><th>Valor recebido</th><th>Forma de recebimento</th></tr></thead><tbody id="rRendaExtraLista"></tbody></table></div><h3>Lançamentos</h3><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Plano</th><th>Valor</th><th>Pagamento</th><th>Parcelas</th><th>Ações</th></tr></thead><tbody id="rList"></tbody></table></div>
 <p class="muted">Compras, custos de estoque, parcelas de crédito e GymPass continuam mostrando o período completo, independentemente da pesquisa de aluno.</p><h3>Previsão de parcelas de crédito</h3><p class="muted">Parcelas futuras aparecem aqui; na data prevista passam a ser exibidas em Lançamentos. A data não confirma repasse da operadora.</p><div id="rParcelasSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Vencimento previsto</th><th>Aluno</th><th>Parcela</th><th>Valor</th></tr></thead><tbody id="rParcelasList"></tbody></table></div>
 <h3 id="rGymTitulo">GymPass</h3><div id="rGymSummary" class="muted"></div><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Aluno</th><th>Check-in do mês</th><th>Valor</th><th>Ação administrativa</th></tr></thead><tbody id="rGymList"></tbody></table></div>
 </div></section>
@@ -699,12 +711,12 @@ async function loadAll(){
  ]);
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
- fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();updateDashboard();loadGymConfig();
+ fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();await preencherProdutosRetirada();await carregarHistoricoRetiradas();updateDashboard();loadGymConfig();
  if(document.getElementById("vsAnivLista"))vsRenderAniversariantes();
  // Reexibe o aluno selecionado com os dados recém-carregados do Supabase.
  if(document.getElementById('pCodigo').value.trim())buscarAtendimento();
 }
-async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
+async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('retData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
 
 function fillPlanSelect(){/* O plano é definido e atualizado no pagamento da mensalidade. */}
 function situacaoAluno(a){
@@ -1320,6 +1332,34 @@ async function addTipoAvaliacao(){let nome=document.getElementById('avNome').val
 function renderPlanos(){document.getElementById('listaPlanos').innerHTML=planos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Planos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar</button> <button class="danger" onclick="excluirCatalogo('Planos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 function renderProdutos(){document.getElementById('listaProdutos').innerHTML=produtos.map(p=>`<tr><td>${p.id}</td><td>${esc(p.nome)}</td><td>${money(p.valor)}</td><td>${Number(p.estoque||0)}</td><td>${money(p.custo_medio||0)}</td><td>${p.ativo?'Sim':'Não'}</td><td><button class="secondary" onclick="editarCatalogo('Produtos',${p.id},'${esc(p.nome)}',${p.valor},${p.ativo})">Editar preço/nome</button> <button class="danger" onclick="excluirCatalogo('Produtos',${p.id},'${esc(p.nome)}')">${p.ativo?'Excluir/desativar':'Excluir'}</button></td></tr>`).join('')}
 async function preencherProdutosCompra(){const s=document.getElementById('compProduto');if(!s)return;s.innerHTML='<option value="">Selecione</option>'+produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('');}
+async function preencherProdutosRetirada(){
+ const el=document.getElementById('retProduto');if(!el)return;
+ const anterior=el.value;
+ el.innerHTML='<option value="">Selecione</option>'+produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)} (disponível: ${Number(p.estoque||0)})</option>`).join('');
+ if([...el.options].some(o=>o.value===anterior))el.value=anterior;
+}
+async function registrarRetiradaEstoque(){
+ const btn=document.getElementById('retSalvarBtn'),msg=document.getElementById('retMsg');
+ const produtoId=Number(document.getElementById('retProduto').value),qtd=Number(document.getElementById('retQtd').value),data=document.getElementById('retData').value;
+ const motivo=document.getElementById('retMotivo').value,detalhe=document.getElementById('retOutro').value.trim();
+ if(!produtoId||!Number.isInteger(qtd)||qtd<1||!data||!motivo||(motivo==='Outro'&&!detalhe)){msg.textContent='Preencha produto, data, quantidade inteira e motivo.';return;}
+ if(!confirm(`Confirma a retirada de ${qtd} unidade(s)? Esta operação não gera venda nem movimentação de caixa.`))return;
+ btn.disabled=true;msg.textContent='Registrando retirada...';
+ try{
+  const r=await sb.rpc('vitturi_registrar_retirada_estoque',{p_produto_id:produtoId,p_quantidade:qtd,p_data:data,p_motivo:motivo,p_detalhe:motivo==='Outro'?detalhe:null});
+  if(r.error)throw Error(r.error.message);
+  msg.textContent='Retirada registrada! Estoque atualizado. Nenhuma movimentação no caixa.';
+  document.getElementById('retQtd').value=1;document.getElementById('retMotivo').value='';document.getElementById('retOutro').value='';document.getElementById('retOutroBox').classList.add('hidden');
+  await loadAll();
+ }catch(e){msg.textContent='Não foi possível registrar a retirada: '+e.message;}
+ finally{btn.disabled=false;}
+}
+async function carregarHistoricoRetiradas(){
+ const b=document.getElementById('listaRetiradas');if(!b)return;
+ const r=await sb.from('movimentos_estoque').select('produto_id,quantidade,data_movimento,referencia').eq('tipo','Retirada').order('data_movimento',{ascending:false}).limit(100);
+ if(r.error){b.innerHTML=`<tr><td colspan="4">Não foi possível carregar retiradas: ${esc(r.error.message)}</td></tr>`;return;}
+ b.innerHTML=(r.data||[]).map(m=>{const p=produtos.find(x=>Number(x.id)===Number(m.produto_id));const motivo=String(m.referencia||'').replace(/^Retirada: /,'');return `<tr><td>${dataBR(m.data_movimento)}</td><td>${esc(p?.nome||'Produto #'+m.produto_id)}</td><td>${Math.abs(Number(m.quantidade||0))}</td><td>${esc(motivo)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhuma retirada registrada.</td></tr>';
+}
 let compraEmEdicao=null;
 function cancelarEdicaoCompra(){
  compraEmEdicao=null;document.getElementById("compSalvarBtn").textContent="REGISTRAR COMPRA";document.getElementById("compCancelarBtn").classList.add("hidden");document.getElementById("compProduto").disabled=false;document.getElementById("compProduto").value="";document.getElementById("compQtd").value=1;document.getElementById("compCusto").value="";document.getElementById("compFornecedor").value="";document.getElementById("compData").value=localDate();
@@ -1742,7 +1782,20 @@ async function vsAtualizarInicio(inicio,fim,hoje){
  }catch(e){console.warn('Painel Início:',e)}
 }
 
-function toggleCustom(){const mode=document.getElementById('rPeriodo').value;document.getElementById('rFromBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rToBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rMonthBox').classList.toggle('hidden',mode!=='specific_month')}
+function toggleCustom(){const mode=document.getElementById('rPeriodo').value;document.getElementById('rFromBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rToBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rMonthBox').classList.toggle('hidden',mode!=='specific_month');if(mode==='specific_month')vsMontarMeses()}
+let vsAnoCalendario=null;
+function vsMontarMeses(){
+ const input=document.getElementById('rMonth');
+ if(vsAnoCalendario===null)vsAnoCalendario=input.value?Number(input.value.slice(0,4)):new Date().getFullYear();
+ document.getElementById('vsAnoSelecionado').textContent=String(vsAnoCalendario);
+ const grade=document.getElementById('vsGradeMeses');grade.replaceChildren();
+ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].forEach((mes,i)=>{
+  const valor=vsAnoCalendario+'-'+String(i+1).padStart(2,'0');
+  const b=document.createElement('button');b.type='button';b.className='secondary vs-mes-opcao'+(input.value===valor?' selecionado':'');b.textContent=mes;
+  b.onclick=()=>{input.value=valor;vsMontarMeses();gerarRelatorio()};grade.appendChild(b);
+ });
+}
+function vsMudarAno(delta){if(vsAnoCalendario===null)vsAnoCalendario=new Date().getFullYear();vsAnoCalendario+=delta;vsMontarMeses()}
 // Exclusão controlada: somente Avaliações, mediante senha e RPC administrativa.
 async function excluirAvaliacaoPagamento(id){
  if(!sb){alert('Conexão com Supabase indisponível.');return;}
@@ -2270,16 +2323,28 @@ async function gerarRelatorio(){
    const formasTotais=new Map();
    for(const f of formasExibidas){const nome=formaBR(f.forma_pagamento);formasTotais.set(nome,(formasTotais.get(nome)||0)+Number(f.valor||0));}
    const formaTexto=[...formasTotais].map(([nome])=>esc(nome)).join(' + ')||'—';
-   const descricao=esc(x.descricao)+(matricula?' + Taxa de matrícula':Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula':'');
+   const descricao=esc(String(x.tipo||'').toLowerCase()==='venda'?String(x.descricao||'').replace(/^(.+?)\s+x\s*(\d+)$/i,(_,produto,qtd)=>`${qtd} x ${produto}`):x.descricao)+(matricula?' + Taxa de matrícula':Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula':'');
    // Um único controle visual; as ações permanecem individuais para evitar exclusão parcial acidental.
    const acoes=matricula
      ? `<button type="button" class="secondary" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'excluir')">Excluir</button>`
      : `<button type="button" class="secondary" onclick="visualizarAcaoPagamento(${Number(x.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="visualizarAcaoPagamento(${Number(x.id)},'excluir')">Excluir</button>`;
    const pagamentoTexto=x.status_recebimento==='Pendente'?(x.tipo==='Taxa de matrícula'?'<strong>Incluída nas parcelas do cartão</strong>':'<strong>Pendente — vence '+dataBR(x.data_vencimento)+'</strong>'):formaTexto;
-   return {data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${descricao}</td><td>${money(valorExibido)}</td><td>${pagamentoTexto}</td><td>${acoes}</td></tr>`};
+   return {data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${descricao}</td><td>${money(valorExibido)}</td><td>${pagamentoTexto}</td><td>Única</td><td>${acoes}</td></tr>`};
  });
  const parcelasLancadas=parcelasVisiveis.filter(x=>x.data_prevista<=limiteParcelas);
- const linhasParceladas=parcelasLancadas.map(x=>({data:x.data_prevista,html:`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>Crédito parcelado</td><td>Parcela ${Number(x.numero_parcela)}/${Number(x.total_parcelas)}</td><td>${money(x.valor)}</td><td>Crédito parcelado</td><td><button type="button" class="secondary" onclick="editarPlanoParceladoSeguro(${Number(x.pagamento_id)})">Editar</button> <button type="button" class="danger" onclick="excluirPlanoParceladoSeguro(${Number(x.pagamento_id)})">Excluir</button></td></tr>`}));
+  // Consulta apenas para mostrar o nome do plano; não altera pagamentos nem parcelas.
+  const planoPorPagamento=new Map(payments.map(x=>[Number(x.id),x]));
+  const idsPlanos=[...new Set(parcelasLancadas.map(x=>Number(x.pagamento_id)).filter(id=>Number.isSafeInteger(id)&&!planoPorPagamento.has(id)))];
+  for(let i=0;i<idsPlanos.length;i+=100){
+    const rp=await sb.from('Pagamentos').select('id,descricao,taxa_matricula_valor').in('id',idsPlanos.slice(i,i+100));
+    if(!rp.error)(rp.data||[]).forEach(x=>planoPorPagamento.set(Number(x.id),x));
+  }
+  const linhasParceladas=parcelasLancadas.map(x=>{
+    const pg=planoPorPagamento.get(Number(x.pagamento_id));
+    const plano=pg?(String(pg.descricao||'Plano')+(Number(pg.taxa_matricula_valor||0)>0?' + Taxa de matrícula':'')):'Plano não identificado';
+    const parcelaTexto=`${Number(x.numero_parcela)}/${Number(x.total_parcelas)}`;
+    return {data:x.data_prevista,html:`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>Mensalidade</td><td>${esc(plano)}</td><td>${money(x.valor)}</td><td>Crédito parcelado</td><td>${parcelaTexto}</td><td><button type="button" class="secondary" onclick="editarPlanoParceladoSeguro(${Number(x.pagamento_id)})">Editar</button> <button type="button" class="danger" onclick="excluirPlanoParceladoSeguro(${Number(x.pagamento_id)})">Excluir</button></td></tr>`};
+  });
  document.getElementById('rList').innerHTML=[...linhasOriginais,...linhasParceladas].sort((a,b)=>b.data.localeCompare(a.data)).map(x=>x.html).join('');
  const parcelasFuturas=parcelasVisiveis.filter(x=>x.data_prevista>limiteParcelas);
  document.getElementById('rParcelasSummary').textContent=`${parcelasFuturas.length} parcela(s) programada(s) após ${dataBR(limiteParcelas)} — ${money(parcelasFuturas.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
