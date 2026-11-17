@@ -463,8 +463,8 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <button class="primary" id="compSalvarBtn" onclick="registrarCompraEstoque()">REGISTRAR COMPRA</button> <button class="secondary hidden" id="compCancelarBtn" onclick="cancelarEdicaoCompra()">CANCELAR EDIÇÃO</button><div id="compMsg" class="status"></div></div>
 <div class="box"><h2>Registrar retirada</h2>
 <div class="grid"><div><label>Produto</label><select id="retProduto"></select></div><div><label>Data da retirada</label><input id="retData" type="date"></div><div><label>Quantidade retirada</label><input id="retQtd" type="number" min="1" step="1" value="1"></div><div><label>Motivo</label><select id="retMotivo" onchange="document.getElementById('retOutroBox').classList.toggle('hidden',this.value!=='Outro')"><option value="">Selecione</option><option>Vencimento</option><option>Produto danificado</option><option>Consumo próprio</option><option>Outro</option></select></div><div id="retOutroBox" class="hidden"><label>Especifique o motivo</label><input id="retOutro" maxlength="200" placeholder="Informe o motivo"></div></div><br>
-<button class="primary" id="retSalvarBtn" onclick="registrarRetiradaEstoque()">REGISTRAR RETIRADA</button><div id="retMsg" class="status" aria-live="polite"></div></div>
-<div class="box"><h2>Histórico de retiradas</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Motivo</th></tr></thead><tbody id="listaRetiradas"></tbody></table></div></div>
+<button class="primary" id="retSalvarBtn" onclick="registrarRetiradaEstoque()">REGISTRAR RETIRADA</button> <button class="secondary hidden" id="retCancelarBtn" onclick="cancelarEdicaoRetirada()">CANCELAR EDIÇÃO</button><div id="retMsg" class="status" aria-live="polite"></div></div>
+<div class="box"><h2>Histórico de retiradas</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="listaRetiradas"></tbody></table></div></div>
 <div class="box"><h2>Histórico de compras</h2><div style="overflow:auto"><table><thead><tr><th>Data</th><th>Produto</th><th>Quantidade</th><th>Custo unitário</th><th>Total</th><th>Fornecedor</th><th>Ação</th></tr></thead><tbody id="listaCompras"></tbody></table></div></div>
 </section>
 
@@ -1338,27 +1338,72 @@ async function preencherProdutosRetirada(){
  el.innerHTML='<option value="">Selecione</option>'+produtos.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${esc(p.nome)} (disponível: ${Number(p.estoque||0)})</option>`).join('');
  if([...el.options].some(o=>o.value===anterior))el.value=anterior;
 }
+let retiradaEmEdicao=null;
+function cancelarEdicaoRetirada(){
+ retiradaEmEdicao=null;
+ document.getElementById('retSalvarBtn').textContent='REGISTRAR RETIRADA';
+ document.getElementById('retCancelarBtn').classList.add('hidden');
+ document.getElementById('retProduto').value='';document.getElementById('retQtd').value=1;
+ document.getElementById('retData').value=localDate();document.getElementById('retMotivo').value='';
+ document.getElementById('retOutro').value='';document.getElementById('retOutroBox').classList.add('hidden');
+ document.getElementById('retMsg').textContent='';
+}
+async function iniciarEdicaoRetirada(id){
+ const r=await sb.from('movimentos_estoque').select('id,produto_id,quantidade,data_movimento,referencia').eq('id',id).eq('tipo','Retirada').single();
+ if(r.error){alert('Não foi possível abrir a retirada: '+r.error.message);return;}
+ const m=r.data;retiradaEmEdicao=m;
+ const sel=document.getElementById('retProduto');
+ if(![...sel.options].some(o=>o.value===String(m.produto_id))){
+  const p=produtos.find(x=>Number(x.id)===Number(m.produto_id));
+  sel.add(new Option((p?.nome||'Produto #'+m.produto_id)+' (inativo)',String(m.produto_id)));
+ }
+ sel.value=String(m.produto_id);document.getElementById('retQtd').value=Math.abs(Number(m.quantidade));
+ document.getElementById('retData').value=m.data_movimento;
+ const texto=String(m.referencia||'').replace(/^Retirada: /,'');
+ const padroes=['Vencimento','Produto danificado','Consumo próprio'];
+ const motivo=padroes.includes(texto)?texto:'Outro';
+ document.getElementById('retMotivo').value=motivo;
+ document.getElementById('retOutro').value=motivo==='Outro'?texto.replace(/^Outro: /,''):'';
+ document.getElementById('retOutroBox').classList.toggle('hidden',motivo!=='Outro');
+ document.getElementById('retSalvarBtn').textContent='SALVAR CORREÇÃO';
+ document.getElementById('retCancelarBtn').classList.remove('hidden');
+ document.getElementById('retMsg').textContent='Editando retirada #'+id+'. Confira os dados antes de salvar.';
+ document.getElementById('retSalvarBtn').scrollIntoView({behavior:'smooth',block:'center'});
+}
 async function registrarRetiradaEstoque(){
  const btn=document.getElementById('retSalvarBtn'),msg=document.getElementById('retMsg');
  const produtoId=Number(document.getElementById('retProduto').value),qtd=Number(document.getElementById('retQtd').value),data=document.getElementById('retData').value;
  const motivo=document.getElementById('retMotivo').value,detalhe=document.getElementById('retOutro').value.trim();
  if(!produtoId||!Number.isInteger(qtd)||qtd<1||!data||!motivo||(motivo==='Outro'&&!detalhe)){msg.textContent='Preencha produto, data, quantidade inteira e motivo.';return;}
- if(!confirm(`Confirma a retirada de ${qtd} unidade(s)? Esta operação não gera venda nem movimentação de caixa.`))return;
- btn.disabled=true;msg.textContent='Registrando retirada...';
+ const editando=retiradaEmEdicao;
+ if(!confirm(editando?'Confirma a correção desta retirada? O estoque dos produtos será ajustado automaticamente.':`Confirma a retirada de ${qtd} unidade(s)? Esta operação não gera venda nem movimentação de caixa.`))return;
+ if(editando&&!await confirmarSenhaAdministrador())return;
+ btn.disabled=true;msg.textContent=editando?'Salvando correção...':'Registrando retirada...';
  try{
-  const r=await sb.rpc('vitturi_registrar_retirada_estoque',{p_produto_id:produtoId,p_quantidade:qtd,p_data:data,p_motivo:motivo,p_detalhe:motivo==='Outro'?detalhe:null});
+  const r=editando
+   ?await sb.rpc('vitturi_editar_retirada_estoque',{p_movimento_id:editando.id,p_produto_id:produtoId,p_quantidade:qtd,p_data:data,p_motivo:motivo,p_detalhe:motivo==='Outro'?detalhe:null})
+   :await sb.rpc('vitturi_registrar_retirada_estoque',{p_produto_id:produtoId,p_quantidade:qtd,p_data:data,p_motivo:motivo,p_detalhe:motivo==='Outro'?detalhe:null});
   if(r.error)throw Error(r.error.message);
-  msg.textContent='Retirada registrada! Estoque atualizado. Nenhuma movimentação no caixa.';
-  document.getElementById('retQtd').value=1;document.getElementById('retMotivo').value='';document.getElementById('retOutro').value='';document.getElementById('retOutroBox').classList.add('hidden');
-  await loadAll();
- }catch(e){msg.textContent='Não foi possível registrar a retirada: '+e.message;}
+  cancelarEdicaoRetirada();await loadAll();
+  msg.textContent=editando?'Retirada corrigida e estoques atualizados. Nenhuma movimentação no caixa.':'Retirada registrada! Estoque atualizado. Nenhuma movimentação no caixa.';
+ }catch(e){msg.textContent='Não foi possível salvar a retirada: '+e.message;}
  finally{btn.disabled=false;}
+}
+async function excluirRetiradaEstoque(id){
+ if(!confirm('Excluir esta retirada e devolver a quantidade ao estoque?'))return;
+ if(!await confirmarSenhaAdministrador())return;
+ try{
+  const r=await sb.rpc('vitturi_excluir_retirada_estoque',{p_movimento_id:id});
+  if(r.error)throw Error(r.error.message);
+  if(retiradaEmEdicao?.id===id)cancelarEdicaoRetirada();
+  await loadAll();document.getElementById('retMsg').textContent='Retirada excluída e estoque devolvido. Nenhuma movimentação no caixa.';
+ }catch(e){alert('Não foi possível excluir a retirada: '+e.message);}
 }
 async function carregarHistoricoRetiradas(){
  const b=document.getElementById('listaRetiradas');if(!b)return;
- const r=await sb.from('movimentos_estoque').select('produto_id,quantidade,data_movimento,referencia').eq('tipo','Retirada').order('data_movimento',{ascending:false}).limit(100);
- if(r.error){b.innerHTML=`<tr><td colspan="4">Não foi possível carregar retiradas: ${esc(r.error.message)}</td></tr>`;return;}
- b.innerHTML=(r.data||[]).map(m=>{const p=produtos.find(x=>Number(x.id)===Number(m.produto_id));const motivo=String(m.referencia||'').replace(/^Retirada: /,'');return `<tr><td>${dataBR(m.data_movimento)}</td><td>${esc(p?.nome||'Produto #'+m.produto_id)}</td><td>${Math.abs(Number(m.quantidade||0))}</td><td>${esc(motivo)}</td></tr>`}).join('')||'<tr><td colspan="4">Nenhuma retirada registrada.</td></tr>';
+ const r=await sb.from('movimentos_estoque').select('id,produto_id,quantidade,data_movimento,referencia').eq('tipo','Retirada').order('data_movimento',{ascending:false}).order('id',{ascending:false}).limit(100);
+ if(r.error){b.innerHTML=`<tr><td colspan="5">Não foi possível carregar retiradas: ${esc(r.error.message)}</td></tr>`;return;}
+ b.innerHTML=(r.data||[]).map(m=>{const p=produtos.find(x=>Number(x.id)===Number(m.produto_id));const motivo=String(m.referencia||'').replace(/^Retirada: /,'');return `<tr><td>${dataBR(m.data_movimento)}</td><td>${esc(p?.nome||'Produto #'+m.produto_id)}</td><td>${Math.abs(Number(m.quantidade||0))}</td><td>${esc(motivo)}</td><td><button class="secondary" onclick="iniciarEdicaoRetirada(${Number(m.id)})">Editar</button> <button class="danger" onclick="excluirRetiradaEstoque(${Number(m.id)})">Excluir</button></td></tr>`}).join('')||'<tr><td colspan="5">Nenhuma retirada registrada.</td></tr>';
 }
 let compraEmEdicao=null;
 function cancelarEdicaoCompra(){
