@@ -1860,7 +1860,18 @@ function vsImprimirAniversariantes(){
  td:first-child{width:27%;font-weight:800;text-align:center}td:nth-child(2){overflow-wrap:anywhere}
  tbody tr:last-child td{border-bottom:0}
  @media print{body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}.acoes{display:none}.cartaz{margin:0;width:210mm;height:297mm}.mes{font-size:32pt}th{font-size:21pt}td{font-size:16pt}}
- </style></head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div>
+ </style><style id="vs-padronizacao-monetaria-final-css">
+/* Campos monetários: número nativo preservado para todas as regras financeiras. */
+.vs-money-edit{position:relative;min-width:0;width:100%}
+.vs-money-edit>input{width:100%}
+.vs-money-edit:not(:focus-within)>input{color:transparent!important;caret-color:transparent}
+.vs-money-edit>.vs-money-value{position:absolute;left:11px;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:#202a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-money-edit:focus-within>.vs-money-value{display:none}
+.vs-money-field-label{font-size:11px;font-weight:700;color:#555;display:block;margin:0 0 4px}
+.payment-row,.int-payrow{align-items:end!important}
+.payment-row .vs-money-edit,.int-payrow .vs-money-edit{align-self:end}
+</style>
+</head><body><div class="acoes"><button onclick="window.print()">Imprimir cartaz</button></div><div class="cartaz"><div class="mes">${vsEsc(mes)}</div><div class="lista"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody>${nomes}</tbody></table></div></div>
 
 
 </body></html>`);janela.document.close();
@@ -3299,6 +3310,40 @@ function decorate(id){
 fixed.forEach(decorate);
 const phone=document.getElementById('aTel');if(phone&&!phone.placeholder)phone.placeholder='(00) 00000-0000';
 const renda=document.getElementById('reNome');if(renda)renda.removeAttribute('placeholder');
+})();
+</script>
+<script id="vs-padronizacao-monetaria-final-js">
+(function(){
+'use strict';
+const br=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fixedIds=['plValor','prValor','compCusto','avValor','reValor','aValorPersonal','valorPersonalPlano','edMensalidadePersonalValor','edPagamentoValor'];
+function wrap(input,caption){
+ if(!input||input.dataset.vsMoneyEdit||input.closest('.vs-money-preview'))return;
+ if(input.type!=='number')return;
+ const w=document.createElement('div');w.className='vs-money-edit';
+ input.parentNode.insertBefore(w,input);w.appendChild(input);
+ if(caption){const label=document.createElement('label');label.className='vs-money-field-label';label.textContent=caption;w.insertBefore(label,input)}
+ const d=document.createElement('span');d.className='vs-money-value';w.appendChild(d);
+ const update=()=>{const raw=input.value;const n=Number(raw);d.textContent=raw!==''&&Number.isFinite(n)?br.format(n):'0,00'};
+ input.addEventListener('input',update);input.addEventListener('change',update);input.addEventListener('blur',update);
+ input.dataset.vsMoneyEdit='1';update();
+ return update;
+}
+fixedIds.forEach(id=>wrap(document.getElementById(id)));
+function dynamic(){
+ document.querySelectorAll('.payment-row input[aria-label="Valor nesta forma"]').forEach(x=>wrap(x,'Valor do pagamento (R$)'));
+ document.querySelectorAll('.int-payrow input[type="number"]').forEach(x=>{
+  if(x.getAttribute('aria-label')==='Número de parcelas')return;
+  if(x.getAttribute('step')==='0.01')wrap(x,'Valor do pagamento (R$)');
+ });
+}
+dynamic();
+const obs=new MutationObserver(()=>{if(!document.querySelector('.payment-row input[aria-label="Valor nesta forma"]:not([data-vs-money-edit]),.int-payrow input[step="0.01"]:not([data-vs-money-edit])'))return;dynamic()});
+['paymentRows','integrado24'].forEach(id=>{const e=document.getElementById(id);if(e)obs.observe(e,{childList:true,subtree:true})});
+// Atualiza os números exibidos após preenchimento programático, sem tocar no valor original.
+document.addEventListener('click',()=>{document.querySelectorAll('.vs-money-edit').forEach(w=>{
+ const i=w.querySelector('input'),d=w.querySelector('.vs-money-value');if(i&&d&&!w.contains(document.activeElement)){const n=Number(i.value);d.textContent=i.value!==''&&Number.isFinite(n)?br.format(n):'0,00'}
+})},true);
 })();
 </script>
 </body>
