@@ -265,16 +265,6 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-range-bottom .primary{background:#2258a4;border:0;border-radius:7px;padding:10px 16px;color:white;cursor:pointer}
 @media(max-width:650px){#relatorios .vs-range-holder{grid-column:span 1}.vs-range-months{grid-template-columns:1fr}.vs-range-panel{padding:12px}.vs-range-day{padding:8px 0}}
 </style>
-<style id="vs-calendario-unico-css">
-.vs-date-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);z-index:25000;display:flex;align-items:center;justify-content:center;padding:12px}
-.vs-date-dialog{background:#fff;border-radius:12px;width:min(390px,100%);padding:18px;box-shadow:0 12px 35px #0003;color:#24354d}
-.vs-date-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}.vs-date-head strong{font-size:16px}
-.vs-date-controls{display:flex;align-items:center;gap:7px;margin-bottom:12px}.vs-date-controls select{min-width:0;flex:1;padding:8px;font-size:14px}.vs-date-controls button{border:0;border-radius:6px;background:#edf2f8;color:#164983;padding:9px;cursor:pointer}
-.vs-date-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.vs-date-week{text-align:center;color:#6d7c91;font-size:12px;padding:8px 0}
-.vs-date-cell{border:0;background:transparent;border-radius:7px;cursor:pointer;padding:11px 0;color:#263750}.vs-date-cell:hover{background:#e5effd}.vs-date-cell.active{background:#2258a4;color:white;font-weight:bold}.vs-date-cell:disabled{visibility:hidden}
-.vs-date-foot{display:flex;justify-content:space-between;align-items:center;margin-top:15px;border-top:1px solid #e7ecf3;padding-top:12px;gap:8px}.vs-date-foot button{border:0;background:#edf2f8;border-radius:7px;padding:9px 13px;cursor:pointer;color:#2258a4}
-@media(max-width:500px){.vs-date-dialog{padding:13px}}
-</style>
 <style id="vs-calendarios-finais-css">
 #extrato .vs-ex-range-holder{grid-column:span 2}
 #extrato .vs-range-trigger{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:43px;border:1px solid #ccd5e3;background:#fff;border-radius:7px;padding:10px 13px;color:#29415e;cursor:pointer;text-align:left;font-size:14px}
@@ -288,7 +278,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-mes-trigger[aria-expanded="true"]::after{content:'▴'}
 .vs-mes-trigger + .vs-mes-outro{margin-top:6px}
 </style>
-</head>
+<style id="vs-relatorio-mes-compacto-css">#rMonthBox .vs-mes-calendario[hidden]{display:none!important}#rMonthBox .vs-mes-trigger{max-width:360px}#rMonthBox .vs-mes-calendario{margin-top:6px}</style></head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
   <div class="bv-image-stage">
@@ -3182,32 +3172,1433 @@ function render(){const target=document.getElementById('vsRangeMonths');if(!targ
 }
 })();
 </script>
-<script id="vs-calendario-unico-js">
-/* Calendário de um dia, independente dos relatórios de intervalo. */
+<script id="vs-ex-range-js">
 (function(){
-'use strict';
+let year,month,first=null,last=null;
 const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-let target=null, overlay=null, year=0, month=0;
-function localDate(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return null;const [y,m,d]=value.split('-').map(Number);const x=new Date(y,m-1,d);return x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d?x:null;}
-function iso(y,m,d){return String(y).padStart(4,'0')+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
-function close(){if(overlay)overlay.remove();overlay=null;target=null;}
-function render(){if(!overlay||!target)return;const dlg=overlay.querySelector('.vs-date-dialog');const selected=localDate(target.value);
- const yearOptions=Array.from({length:201},(_,i)=>1900+i).map(y=>'<option value="'+y+'"'+(y===year?' selected':'')+'>'+y+'</option>').join('');
- dlg.innerHTML='<div class="vs-date-head"><strong>Escolha a data</strong><button type="button" class="secondary" data-action="close">Fechar ×</button></div>'+
- '<div class="vs-date-controls"><button type="button" data-action="prev" aria-label="Mês anterior">‹</button><select aria-label="Mês" data-action="month">'+months.map((name,i)=>'<option value="'+i+'"'+(i===month?' selected':'')+'>'+name+'</option>').join('')+'</select><select aria-label="Ano" data-action="year">'+yearOptions+'</select><button type="button" data-action="next" aria-label="Próximo mês">›</button></div>'+
- '<div class="vs-date-grid">'+['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>'<div class="vs-date-week">'+x+'</div>').join('')+
- Array.from({length:(new Date(year,month,1).getDay()+6)%7},()=>'<span></span>').join('')+
- Array.from({length:new Date(year,month+1,0).getDate()},(_,i)=>{const d=i+1;const value=iso(year,month,d);return '<button type="button" class="vs-date-cell'+(selected&&target.value===value?' active':'')+'" data-day="'+d+'">'+d+'</button>';}).join('')+'</div>'+
- '<div class="vs-date-foot"><button type="button" data-action="clear">Limpar</button><button type="button" data-action="today">Hoje</button></div>';
+const pad=n=>String(n).padStart(2,'0');
+const iso=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+const br=v=>v?v.slice(8,10)+'/'+v.slice(5,7)+'/'+v.slice(0,4):'Escolha a data';
+const shift=(y,m,delta)=>{const d=new Date(y,m+delta,1);return [d.getFullYear(),d.getMonth()]};
+window.vsExRangeSync=function(){const a=document.getElementById('exInicio')?.value,b=document.getElementById('exFim')?.value,t=document.getElementById('vsExRangeText');if(t)t.textContent=a&&b?br(a)+' — '+br(b):'Escolha a data de início — Escolha a data final'};
+window.vsExRangeClose=function(){document.getElementById('vsExRangeShade')?.remove()};
+window.vsExRangeOpen=function(){
+ window.vsExRangeClose();const a=document.getElementById('exInicio').value,b=document.getElementById('exFim').value;
+ first=null;last=null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
+ const shade=document.createElement('div');shade.id='vsExRangeShade';shade.className='vs-range-shade';shade.innerHTML='<div class="vs-range-panel" role="dialog" aria-modal="true" aria-label="Escolher período"><div class="vs-range-top"><strong>Escolha o período</strong><button type="button" id="vsExRangeExit">Fechar ×</button></div><div class="vs-range-months" id="vsExRangeMonths"></div><div class="vs-range-bottom"><span id="vsExRangeSummary"></span><button type="button" class="primary" id="vsExRangeConfirm">Confirmar</button></div></div>';
+ shade.addEventListener('click',e=>{if(e.target===shade)window.vsExRangeClose()});document.body.append(shade);
+ document.getElementById('vsExRangeExit').onclick=window.vsExRangeClose;
+ document.getElementById('vsExRangeConfirm').onclick=()=>{if(!first)return;const from=first,to=last||first;document.getElementById('exInicio').value=from;document.getElementById('exFim').value=to;window.vsExRangeSync();window.vsExRangeClose();document.getElementById('exInicio').dispatchEvent(new Event('change',{bubbles:true}));document.getElementById('exFim').dispatchEvent(new Event('change',{bubbles:true}))};
+ render();
+};
+function render(){const target=document.getElementById('vsExRangeMonths');if(!target)return;target.replaceChildren();
+ for(let idx=0;idx<2;idx++){
+ const [y,m]=shift(year,month,idx);const wrap=document.createElement('div');
+ const nav=document.createElement('div');nav.className='vs-range-nav';
+ const prev=document.createElement('button');prev.type='button';prev.textContent=idx===0?'‹':'«';prev.title='Mês anterior';prev.onclick=()=>{[year,month]=shift(year,month,idx===0?-1:-12);render()};nav.append(prev);
+ const selM=document.createElement('select');months.forEach((name,i)=>{const op=new Option(name,i,i===m,i===m);selM.add(op)});selM.onchange=()=>{[year,month]=shift(y,Number(selM.value),-idx);render()};nav.append(selM);
+ const selY=document.createElement('select');for(let yy=y-20;yy<=y+20;yy++){const op=new Option(String(yy),String(yy),yy===y,yy===y);selY.add(op)}selY.onchange=()=>{[year,month]=shift(Number(selY.value),m,-idx);render()};nav.append(selY);
+ const next=document.createElement('button');next.type='button';next.textContent=idx===1?'›':'»';next.title='Próximo mês';next.onclick=()=>{[year,month]=shift(year,month,idx===1?1:12);render()};nav.append(next);wrap.append(nav);
+ const grid=document.createElement('div');grid.className='vs-range-grid';['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].forEach(t=>{const el=document.createElement('span');el.className='vs-range-week';el.textContent=t;grid.append(el)});
+ const offset=(new Date(y,m,1).getDay()+6)%7;for(let j=0;j<offset;j++){const empty=document.createElement('span');grid.append(empty)}
+ const days=new Date(y,m+1,0).getDate();for(let day=1;day<=days;day++){const val=iso(y,m,day),btn=document.createElement('button');btn.type='button';btn.className='vs-range-day';btn.textContent=day;if(val===first||val===last)btn.classList.add('selected');else if(first&&last&&val>first&&val<last)btn.classList.add('between');btn.onclick=()=>{if(!first||last){first=val;last=null}else if(val<first){last=first;first=val}else{last=val}render()};grid.append(btn)}wrap.append(grid);target.append(wrap);
+ }
+ const summary=document.getElementById('vsExRangeSummary');summary.textContent=first?(br(first)+' — '+(last?br(last):'Selecione o final (ou clique novamente no mesmo dia)')):'Selecione a data de início';
 }
-function open(input){if(overlay&&target===input)return;close();target=input;const dt=localDate(input.value)||new Date();year=dt.getFullYear();month=dt.getMonth();overlay=document.createElement('div');overlay.className='vs-date-backdrop';overlay.innerHTML='<div class="vs-date-dialog" role="dialog" aria-modal="true" aria-label="Selecionar data"></div>';document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay){close();return;}const btn=e.target.closest('button');if(!btn)return;const action=btn.dataset.action;if(action==='close'){close();return;}if(action==='prev'||action==='next'){const d=new Date(year,month+(action==='prev'?-1:1),1);year=d.getFullYear();month=d.getMonth();render();return;}if(action==='clear'){setValue('');return;}if(action==='today'){const d=new Date();setValue(iso(d.getFullYear(),d.getMonth(),d.getDate()));return;}if(btn.dataset.day){setValue(iso(year,month,Number(btn.dataset.day)));}});overlay.addEventListener('change',e=>{if(e.target.dataset.action==='month')month=Number(e.target.value);if(e.target.dataset.action==='year')year=Number(e.target.value);render();});render();}
-function setValue(value){const el=target;close();if(!el)return;el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
-/* Captura também os campos de data criados dinamicamente por edições. */
-document.addEventListener('pointerdown',function(e){const input=e.target.closest&&e.target.closest('input[type="date"]');if(!input||input.disabled||input.closest('.vs-range-shade'))return;e.preventDefault();open(input);},true);
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){close();return;}const input=e.target.closest&&e.target.closest('input[type="date"]');if(input&&!input.disabled&&(e.key==='Enter'||e.key===' '||e.key==='ArrowDown')){e.preventDefault();open(input);}},true);
 })();
 </script>
+<script id="vs-mes-outros-js">(function(){
+'use strict';
+const names=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const full=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function init(wrap){
+ const input=document.getElementById(wrap.dataset.monthInput);if(!input)return;
+ let year=Number((input.value||'').slice(0,4))||new Date().getFullYear();
+ const header=wrap.querySelector('[data-year]'),grid=wrap.querySelector('[data-month-grid]');
+ const trigger=document.createElement('button');trigger.type='button';trigger.className='vs-mes-trigger';trigger.setAttribute('aria-expanded','false');
+ trigger.setAttribute('aria-label','Selecionar mês e ano');
+ wrap.parentNode.insertBefore(trigger,wrap);
+ wrap.hidden=true;
+ function updateLabel(){const val=input.value||'';const m=Number(val.slice(5,7))-1;const y=Number(val.slice(0,4));trigger.textContent=m>=0&&m<12&&y?full[m]+' de '+y:'Escolha o mês e ano';}
+ function close(){wrap.hidden=true;trigger.setAttribute('aria-expanded','false')}
+ function open(){document.querySelectorAll('.vs-mes-outro').forEach(w=>{if(w!==wrap){w.hidden=true;const t=w.previousElementSibling;if(t&&t.classList.contains('vs-mes-trigger'))t.setAttribute('aria-expanded','false')}});wrap.hidden=false;trigger.setAttribute('aria-expanded','true');render()}
+ trigger.addEventListener('click',()=>wrap.hidden?open():close());
+ function render(){header.textContent=year;grid.replaceChildren();const selected=input.value;
+ names.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.className='secondary vs-mes-opcao';b.textContent=name;
+ const value=year+'-'+String(i+1).padStart(2,'0');if(value===selected)b.classList.add('selecionado');
+ b.onclick=()=>{input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));render();close()};grid.append(b)});updateLabel()}
+ wrap.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{year+=Number(b.dataset.step);render()}));
+ input.addEventListener('change',()=>{const y=Number((input.value||'').slice(0,4));if(y)year=y;render();updateLabel()});
+ render();
+ }
+ document.querySelectorAll('.vs-mes-outro').forEach(init);
+ function closeAllMonthPickers(){document.querySelectorAll('.vs-mes-outro').forEach(w=>{w.hidden=true;const t=w.previousElementSibling;if(t&&t.classList.contains('vs-mes-trigger'))t.setAttribute('aria-expanded','false')})}
+ document.addEventListener('pointerdown',e=>{if(!e.target.closest('.vs-mes-outro')&&!e.target.closest('.vs-mes-trigger'))closeAllMonthPickers()},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAllMonthPickers()},true);
+ document.addEventListener('click',e=>{if(e.target.closest('#app nav button')||e.target.closest('.vs-sair-menu'))closeAllMonthPickers()},true);
+})();</script>
+<script id="vs-relatorio-mes-compacto-js">
+(function(){
+'use strict';
+const box=document.getElementById('rMonthBox');
+const picker=box&&box.querySelector('.vs-mes-calendario');
+const input=document.getElementById('rMonth');
+if(!box||!picker||!input)return;
+const months=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const trigger=document.createElement('button');
+trigger.type='button';
+trigger.className='vs-mes-trigger';
+trigger.setAttribute('aria-label','Selecionar mês e ano do relatório');
+trigger.setAttribute('aria-expanded','false');
+picker.parentNode.insertBefore(trigger,picker);
+picker.hidden=true;
+function label(){
+ const v=input.value||'';
+ const y=Number(v.slice(0,4)),m=Number(v.slice(5,7));
+ trigger.textContent=y&&m>=1&&m<=12?months[m-1]+' de '+y:'Escolha o mês e ano';
+}
+function close(){picker.hidden=true;trigger.setAttribute('aria-expanded','false');label()}
+function open(){picker.hidden=false;trigger.setAttribute('aria-expanded','true');if(typeof vsMontarMeses==='function')vsMontarMeses();label()}
+trigger.addEventListener('click',()=>picker.hidden?open():close());
+picker.addEventListener('click',e=>{
+ if(e.target.closest('button.vs-mes-opcao'))close();
+});
+input.addEventListener('change',label);
+document.addEventListener('pointerdown',e=>{
+ if(!picker.hidden&&!picker.contains(e.target)&&!trigger.contains(e.target))close();
+},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+document.addEventListener('click',e=>{
+ if(e.target.closest('#app nav button')||e.target.closest('.vs-sair-menu')||e.target.closest('#rPeriodo'))close();
+},true);
+const observer=new MutationObserver(()=>{
+ if(box.classList.contains('hidden'))close();
+});
+observer.observe(box,{attributes:true,attributeFilter:['class']});
+label();
+})();
+</script>
+</body></html>`);janela.document.close();
+ vsAnivAvisoNovo='';const aviso=document.getElementById('vsAnivAviso');if(aviso){aviso.textContent='Cartaz aberto para impressão.';aviso.classList.remove('warn')}
+}
 
+async function vsAtualizarInicio(inicio,fim,hoje){
+ try{
+  const [checkins,pends,recentes,produtos]=await Promise.all([
+   sb.from('gympass_checkins').select('valor').gte('data_checkin',inicio).lt('data_checkin',fim),
+   sb.from('Pagamentos').select('aluno_codigo,descricao,valor_total,data_pagamento').eq('status_recebimento','Pendente').order('data_pagamento',{ascending:false}).limit(100),
+   sb.from('Pagamentos').select('aluno_codigo,tipo,valor_total,data_pagamento').order('data_pagamento',{ascending:false}).limit(8),
+   sb.from('Produtos').select('*').limit(100)
+  ]);
+  if(!checkins.error){document.getElementById('vsWhCount').textContent=(checkins.data||[]).length;document.getElementById('vsWhForecast').textContent=money((checkins.data||[]).reduce((a,c)=>a+Number(c.valor||0),0))}
+  const nomes=c=>{const a=alunos.find(x=>String(x.codigo)===String(c));return a?.nome||('Código '+c)};
+  // O resumo de vendas e a tabela acionável são atualizados por carregarVendasPendentes().
+  if(!recentes.error){document.getElementById('vsRecentes').innerHTML=(recentes.data||[]).map(p=>'<tr><td>'+vsEsc(dataBR(p.data_pagamento))+'</td><td>'+vsEsc(nomes(p.aluno_codigo))+'</td><td>'+vsEsc(vsNomeTipo(p.tipo))+'</td><td>'+money(p.valor_total)+'</td></tr>').join('')||'<tr><td colspan="4">Nenhum lançamento</td></tr>'}
+  if(!produtos.error){const lista=(produtos.data||[]).filter(p=>{const q=Number(p.estoque_atual??p.estoque??p.quantidade_disponivel);return Number.isFinite(q)&&q<=3});document.getElementById('vsEstoqueResumo').textContent=lista.length+' produto(s) com estoque baixo';document.getElementById('vsEstoqueDetalhe').innerHTML='<h3 class="vs-detail-title">Produtos com estoque baixo</h3>'+(lista.length?'<div class="vs-detail-table-wrap"><table><thead><tr><th>Produto</th><th>Quantidade disponível</th><th>Situação</th></tr></thead><tbody>'+lista.map(p=>{const qtd=Number(p.estoque_atual??p.estoque??p.quantidade_disponivel);return '<tr><td>'+vsEsc(p.nome||p.descricao||'Produto')+'</td><td>'+vsEsc(qtd)+' unidade(s)</td><td>'+(qtd<=0?'Sem estoque':'Estoque baixo')+'</td></tr>'}).join('')+'</tbody></table></div>':'Nenhum produto com estoque baixo identificado');}
+  document.getElementById('vsPlanosResumo').textContent='Consulte os próximos 7 dias e os vencidos até 45 dias';
+  const limites=alunos.filter(a=>a.vencimento_plano).map(a=>({...a,dias:Math.round((new Date(a.vencimento_plano+'T12:00:00')-new Date(hoje+'T12:00:00'))/86400000)})).filter(a=>{const tipo=vsTipoPlanoAviso(a);if(tipo==='diaria')return false;if(tipo==='semanal'||tipo==='quinzenal')return a.dias>=0&&a.dias<=7;return a.dias>=-45&&a.dias<=7}).sort((a,b)=>a.dias-b.dias);
+  document.getElementById('vsPlanosResumo').textContent=limites.length+' aluno(s) com vencimento próximo ou vencido';
+  document.getElementById('vsPlanosDetalhe').innerHTML='<h3 class="vs-detail-title">Planos a vencer e vencidos</h3>'+(limites.length?'<table><thead><tr><th>Aluno</th><th>Vencimento</th><th>Situação</th></tr></thead><tbody>'+limites.map(a=>'<tr><td>'+vsEsc(a.nome)+'</td><td>'+vsEsc(dataBR(a.vencimento_plano))+'</td><td>'+(a.dias<0?'Vencido há '+(-a.dias)+' dia(s)':a.dias===0?'Vence hoje':'Vence em '+a.dias+' dia(s)')+'</td></tr>').join('')+'</tbody></table>':'Nenhum vencimento no intervalo');
+ }catch(e){console.warn('Painel Início:',e)}
+}
+
+function toggleCustom(){const mode=document.getElementById('rPeriodo').value;document.getElementById('rFromBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rToBox').classList.toggle('hidden',mode!=='custom');document.getElementById('rMonthBox').classList.toggle('hidden',mode!=='specific_month');if(mode==='specific_month')vsMontarMeses()}
+let vsAnoCalendario=null;
+function vsMontarMeses(){
+ const input=document.getElementById('rMonth');
+ if(vsAnoCalendario===null)vsAnoCalendario=input.value?Number(input.value.slice(0,4)):new Date().getFullYear();
+ document.getElementById('vsAnoSelecionado').textContent=String(vsAnoCalendario);
+ const grade=document.getElementById('vsGradeMeses');grade.replaceChildren();
+ ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'].forEach((mes,i)=>{
+  const valor=vsAnoCalendario+'-'+String(i+1).padStart(2,'0');
+  const b=document.createElement('button');b.type='button';b.className='secondary vs-mes-opcao'+(input.value===valor?' selecionado':'');b.textContent=mes;
+  b.onclick=()=>{input.value=valor;vsMontarMeses();gerarRelatorio()};grade.appendChild(b);
+ });
+}
+function vsMudarAno(delta){if(vsAnoCalendario===null)vsAnoCalendario=new Date().getFullYear();vsAnoCalendario+=delta;vsMontarMeses()}
+// Exclusão controlada: somente Avaliações, mediante senha e RPC administrativa.
+async function excluirAvaliacaoPagamento(id){
+ if(!sb){alert('Conexão com Supabase indisponível.');return;}
+ const {data:p,error:e}=await sb.from('Pagamentos').select('id,tipo,aluno_codigo,descricao,valor_total,data_pagamento').eq('id',id).maybeSingle();
+ if(e||!p){alert('Não foi possível consultar o lançamento.');return;}
+ if(String(p.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()!=='avaliacao'){
+  alert('Este lançamento não é uma Avaliação.');return;
+ }
+ const aluno=alunos.find(a=>String(a.codigo)===String(p.aluno_codigo));
+ const aviso='EXCLUIR DEFINITIVAMENTE A AVALIAÇÃO?\n\nRegistro nº '+p.id+
+  '\nAluno: '+(aluno?.nome||p.aluno_codigo)+' (código '+p.aluno_codigo+')'+
+  '\nTipo: '+(p.descricao||'Avaliação')+'\nData: '+dataBR(p.data_pagamento)+
+  '\nValor: '+money(Number(p.valor_total))+
+  '\n\nA exclusão retirará este lançamento dos relatórios. Um registro de auditoria será preservado.';
+ if(!confirm(aviso))return;
+ if(!await confirmarSenhaAdministrador())return;
+ const {error}=await sb.rpc('vitturi_excluir_avaliacao',{p_pagamento_id:Number(id)});
+ if(error){alert('Exclusão não realizada: '+error.message+'\n\nConfirme que o SQL do Teste 06 foi instalado no Supabase.');return;}
+ alert('Avaliação nº '+id+' excluída com sucesso.');
+ await loadAll();await gerarRelatorio();
+}
+
+
+// Exclusão independente: não altera as funções originais de edição/exclusão.
+async function editarPlanoParceladoSeguro(id){
+ if(!sb){alert('Conexão indisponível.');return;}
+ const {data,error}=await sb.from('parcelas_credito').select('id').eq('pagamento_id',id).limit(1);
+ if(error||!data?.length){alert('Parcelamento não encontrado.');return;}
+ window.vsEditarParcelamentoId=Number(id);
+ try{await visualizarAcaoPagamento(Number(id),'editar');}finally{window.vsEditarParcelamentoId=null;}
+}
+
+async function excluirPlanoParceladoSeguro(id){
+ if(!sb){alert('Conexão indisponível.');return;}
+ const [p,pr]=await Promise.all([
+  sb.from('Pagamentos').select('id,tipo,aluno_codigo,descricao,valor_total,data_pagamento').eq('id',id).maybeSingle(),
+  sb.from('parcelas_credito').select('id,valor').eq('pagamento_id',id)
+ ]);
+ if(p.error||pr.error||!p.data||!pr.data?.length){alert('Não foi possível conferir o parcelamento.');return;}
+ const x=p.data, aluno=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));
+ if(!confirm('EXCLUIR O PLANO PARCELADO COMPLETO?\n\nAluno: '+(aluno?.nome||x.aluno_codigo)+'\nPlano: '+x.descricao+'\nData: '+dataBR(x.data_pagamento)+'\nValor total: '+money(x.valor_total)+'\nParcelas vinculadas: '+pr.data.length+'\n\nTodas as parcelas, inclusive anteriores, serão excluídas. O vencimento do aluno não muda.'))return;
+ if(!await confirmarSenhaAdministrador())return;
+ const r=await sb.rpc('vitturi_excluir_parcelamento_v1',{p_pagamento_id:Number(id)});
+ if(r.error){alert('Exclusão NÃO realizada: '+r.error.message+'\n\nConfira se o SQL de teste foi instalado.');return;}
+ alert('Plano parcelado excluído.');await loadAll();await gerarRelatorio();
+}
+
+async function excluirMensalidadePagamento(id){
+ if(!sb){alert('Conexão com Supabase indisponível.');return;}
+ const {data:p,error}=await sb.from('Pagamentos').select('id,tipo,aluno_codigo,descricao,valor_total,data_pagamento,taxa_matricula_valor').eq('id',id).maybeSingle();
+ if(error||!p||String(p.tipo||'').trim().toLowerCase()!=='mensalidade'){alert('Mensalidade não encontrada.');return;}
+ if(Number(p.taxa_matricula_valor||0)>0){alert('Este lançamento contém taxa de matrícula. Exclusão bloqueada para preservar os vínculos financeiros.');return;}
+ const aluno=alunos.find(a=>String(a.codigo)===String(p.aluno_codigo));
+ if(!confirm('EXCLUIR DEFINITIVAMENTE A MENSALIDADE nº '+id+'?\n\nAluno: '+(aluno?.nome||p.aluno_codigo)+'\nPlano: '+(p.descricao||'Mensalidade')+'\nData: '+dataBR(p.data_pagamento)+'\nValor: '+money(p.valor_total)+'\n\nO vencimento do aluno não será alterado.'))return;
+ if(!await confirmarSenhaAdministrador())return;
+ const r=await sb.rpc('vitturi_excluir_mensalidade',{p_pagamento_id:Number(id)});
+ if(r.error){alert('Exclusão não realizada: '+r.error.message);return;}
+ alert('Mensalidade nº '+id+' excluída com sucesso.');await loadAll();await gerarRelatorio();
+}
+
+async function excluirVendaPagamento(id){
+ const r=await sb.from('Pagamentos').select('id,tipo,descricao,valor_total,aluno_codigo').eq('id',id).maybeSingle();
+ if(r.error||String(r.data?.tipo||'').toLowerCase()!=='venda'){alert('Venda não encontrada.');return;}
+ if(!confirm('EXCLUIR DEFINITIVAMENTE A VENDA nº '+id+'?\nProduto: '+r.data.descricao+'\nValor: '+money(r.data.valor_total)+'\n\nO estoque será devolvido e o lançamento removido.'))return;
+ if(!await confirmarSenhaAdministrador())return;
+ const resp=await sb.rpc('vitturi_excluir_venda',{p_pagamento_id:Number(id)});
+ if(resp.error){alert('Exclusão não realizada: '+resp.error.message);return;}
+ alert('Venda excluída. Estoque atualizado.');await loadAll();await gerarRelatorio();
+}
+
+// Edição e exclusão de Avaliações com confirmação de senha.
+function gerenciarLancamentoAgrupado(mensalidadeId,matriculaId,acaoEscolhida){
+  const antigo=document.getElementById('vsGerenciarAgrupado');
+  if(antigo)antigo.remove();
+  const fundo=document.createElement('div');
+  fundo.id='vsGerenciarAgrupado';
+  fundo.className='senha-modal';
+  fundo.style.zIndex='20500';
+  fundo.innerHTML=`<div class="senha-modal-card" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-label="Gerenciar lançamento agrupado">
+    <h2>${acaoEscolhida==='excluir'?'Excluir':'Editar'} lançamento</h2>
+    <p>Este lançamento reúne mensalidade e Taxa de matrícula. Escolha qual registro deseja ${acaoEscolhida==='excluir'?'excluir':'editar'}. Os registros são independentes no banco de dados.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0"><strong style="min-width:135px">Mensalidade #${mensalidadeId}</strong><button type="button" class="secondary" data-id="${mensalidadeId}" data-acao="editar">Editar</button><button type="button" class="danger" data-id="${mensalidadeId}" data-acao="excluir">Excluir</button></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0"><strong style="min-width:135px">Taxa #${matriculaId}</strong><button type="button" class="secondary" data-id="${matriculaId}" data-acao="editar">Editar</button><button type="button" class="danger" data-id="${matriculaId}" data-acao="excluir">Excluir</button></div>
+    <div class="senha-modal-acoes"><button type="button" class="secondary" id="vsFecharAgrupado">Fechar</button></div>
+  </div>`;
+  fundo.querySelectorAll('button[data-acao]').forEach(btn=>{if(btn.dataset.acao!==acaoEscolhida)btn.remove();});
+  document.body.appendChild(fundo);
+  fundo.querySelector('#vsFecharAgrupado').addEventListener('click',()=>fundo.remove());
+  fundo.addEventListener('click',e=>{if(e.target===fundo)fundo.remove()});
+  fundo.querySelectorAll('button[data-id]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=Number(btn.dataset.id),acao=btn.dataset.acao;
+    fundo.remove();
+    visualizarAcaoPagamento(id,acao);
+  }));
+}
+
+async function visualizarAcaoPagamento(id,acao){
+ if(acao==='excluir'){
+  const consulta=await sb.from('Pagamentos').select('tipo').eq('id',id).maybeSingle();
+  if(consulta.error||!consulta.data){alert('Lançamento não encontrado.');return;}
+  const tipo=String(consulta.data.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+  if(tipo==='venda')await excluirVendaPagamento(id);
+  else if(tipo==='avaliacao')await excluirAvaliacaoPagamento(id);
+  else if(tipo==='mensalidade')await excluirMensalidadePagamento(id);
+  else alert('Exclusão não habilitada para este tipo de lançamento.');
+  return;
+ }
+ if(acao!=='editar')return;
+ if(!sb){alert('Conexão com o Supabase indisponível.');return}
+ const [p,f]=await Promise.all([
+  sb.from('Pagamentos').select('*').eq('id',id).maybeSingle(),
+  sb.from('pagamento_formas').select('*').eq('pagamento_id',id)
+ ]);
+ if(p.error||f.error||!p.data){alert('Não foi possível consultar este pagamento: '+(p.error?.message||f.error?.message||'registro não encontrado'));return}
+ const x=p.data;
+ window.edPagamentoAtual={parceladoEdicao:window.vsEditarParcelamentoId===Number(id),id:x.id,tipo:String(x.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()==='avaliacao'?'Avaliação':String(x.tipo||'').trim().toLowerCase()==='venda'?'venda':x.tipo,taxa:Number(x.taxa_matricula_valor||0),alunoCodigo:String(x.aluno_codigo||''),parcelasConferidas:false,conferenciaOk:false,validacaoOk:false};
+  const ehAvaliacao=String(x.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()==='avaliacao';
+  const ehVenda=String(x.tipo||'').trim().toLowerCase()==='venda';
+  const ehMensalidade=String(x.tipo||'').trim().toLowerCase()==='mensalidade';
+  document.getElementById('edMensalidadeCampos').classList.toggle('hidden',!ehMensalidade);
+  if(ehMensalidade){
+    const sel=document.getElementById('edMensalidadePlano');sel.replaceChildren();
+    const opSelecione=document.createElement('option');opSelecione.value='';opSelecione.textContent='Selecione';sel.appendChild(opSelecione);
+    const catalogo=await sb.from('Planos').select('id,nome,valor,ativo').order('nome');
+    if(catalogo.error){alert('Não foi possível consultar os planos: '+catalogo.error.message);return;}
+    window.edMensalidadeCatalogo=catalogo.data||[];
+    (catalogo.data||[]).filter(z=>(z.ativo||z.nome===x.descricao)&&!/^taxa de matr[ií]cula$/i.test(String(z.nome).trim())).forEach(z=>{const op=document.createElement('option');op.value=z.id;op.textContent=z.nome;sel.appendChild(op)});
+    const planoAtual=(catalogo.data||[]).find(z=>String(z.nome).trim().toLowerCase()===String(x.descricao||'').trim().toLowerCase());
+    sel.value=''; // Exigir escolha explícita do plano na edição, mantendo o valor original até a seleção.
+    const alunoAtual=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));
+    window.edMensalidadePersonal=alunoAtual?.categoria_aluno==='Personal Trainer';
+    window.edMensalidadeValorOriginal=Number(x.valor_total||0);
+    document.getElementById('edMensalidadeTaxa').checked=Number(x.taxa_matricula_valor||0)>0;
+    document.getElementById('edMensalidadePersonalValor').value=(Number(x.valor_total||0)-Number(x.taxa_matricula_valor||0)).toFixed(2);
+    atualizarCampoPersonalMensalidadeEdicao();
+  }
+
+  document.getElementById('edVendaCampos').classList.toggle('hidden',!ehVenda);
+  if(ehVenda){
+   document.getElementById('edVendaAluno').value=x.aluno_codigo||'';
+   const mov=await sb.from('movimentos_estoque').select('produto_id,quantidade').eq('pagamento_id',id);
+   const sel=document.getElementById('edVendaProduto');sel.replaceChildren();
+   const catalogo=await sb.from('Produtos').select('id,nome,ativo,valor').order('nome');
+   if(mov.error||catalogo.error){alert('Erro ao consultar o estoque da venda.');return;}
+   window.edVendaCatalogoPrecos=catalogo.data||[];
+   (catalogo.data||[]).filter(z=>z.ativo||z.id===mov.data?.[0]?.produto_id).forEach(z=>{const op=document.createElement('option');op.value=z.id;op.textContent=z.nome;sel.appendChild(op)});
+   sel.value=String(mov.data?.[0]?.produto_id||'');
+   document.getElementById('edVendaQtd').value=mov.data?.length===1?Math.abs(mov.data[0].quantidade):'';
+  }
+  document.getElementById('edAvaliacaoCampos').classList.toggle('hidden',!ehAvaliacao);
+  document.getElementById('edAvaliacaoCampos').style.display=ehAvaliacao?'grid':'none';
+  document.querySelector('#edPagamentoModal .muted').textContent=ehAvaliacao?'Avaliação: confira os dados e vínculos. Para salvar, confirme sua senha de administrador.':'Edição de lançamentos. Confira os vínculos e confirme sua senha antes de salvar.';
+  if(ehAvaliacao){
+    document.getElementById('edAvaliacaoAluno').value=x.aluno_codigo||'';
+    const sel=document.getElementById('edAvaliacaoTipo');sel.replaceChildren();
+    const {data:catalogo,error:erroCatalogo}=await sb.from('tipos_avaliacao').select('id,nome,ativo,valor').order('nome');
+    if(erroCatalogo){alert('Não foi possível carregar os tipos de avaliação: '+erroCatalogo.message);return;}
+    window.edAvaliacaoCatalogoPrecos=catalogo||[];
+    (catalogo||[]).filter(t=>t.ativo||t.nome===x.descricao).forEach(t=>{const op=document.createElement('option');op.value=t.id;op.textContent=t.nome;sel.appendChild(op)});
+    const atualTipo=(catalogo||[]).find(t=>t.nome===x.descricao);sel.value=atualTipo?String(atualTipo.id):'';
+  }
+ document.getElementById('edPagamentoSalvar').disabled=true;
+ document.getElementById('edPagamentoDependencias').textContent='Dependências ainda não conferidas.';
+ const cadastroLocal=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));
+ let nomeAluno=cadastroLocal?.nome;
+ if(!nomeAluno){
+  const consultaAluno=await sb.from('Alunos').select('nome').eq('codigo',String(x.aluno_codigo)).maybeSingle();
+  if(!consultaAluno.error)nomeAluno=consultaAluno.data?.nome;
+ }
+ const identificacao=document.getElementById('edPagamentoIdentificacao');
+ identificacao.replaceChildren();
+ const nomeLinha=document.createElement('div');nomeLinha.style.fontWeight='700';nomeLinha.style.fontSize='17px';
+ nomeLinha.textContent='Aluno: '+(nomeAluno||'Nome não localizado')+'  —  Código: '+x.aluno_codigo;
+ identificacao.append(nomeLinha);
+ // Apenas para edição de parcelamentos: exibe os dados originais no quadro
+ // de identificação, sem modificar os campos editáveis nem outros atendimentos.
+ if(window.edPagamentoAtual?.parceladoEdicao){
+  const infoOriginal=document.createElement('div');
+  infoOriginal.style.marginTop='8px';
+  infoOriginal.style.lineHeight='1.6';
+  const linhasOriginais=[
+   ['Plano',String(x.descricao||'Não informado')],
+   ['Data do pagamento',x.data_pagamento?dataBR(x.data_pagamento):'Não informada'],
+   ['Valor',money(Number(x.valor_total||0))]
+  ];
+  for(const [rotulo,valor] of linhasOriginais){
+   const linha=document.createElement('div');
+   const forte=document.createElement('strong');forte.textContent=rotulo+': ';
+   linha.append(forte,document.createTextNode(valor));
+   infoOriginal.appendChild(linha);
+  }
+  identificacao.appendChild(infoOriginal);
+ }
+ // Em parcelamentos, os valores anteriores já aparecem no quadro de identificação.
+ // Os campos de edição começam vazios para evitar confusão com o registro original.
+ document.getElementById('edPagamentoData').value=window.edPagamentoAtual.parceladoEdicao?'':(x.data_pagamento||'');
+ document.getElementById('edPagamentoValor').value=window.edPagamentoAtual.parceladoEdicao?'':Number(x.valor_total||0).toFixed(2);
+ document.getElementById('edPagamentoFormas').innerHTML='';
+ (f.data||[]).forEach(y=>adicionarFormaEdicaoPagamento(y.forma_pagamento,y.valor));
+ if(window.edPagamentoAtual.parceladoEdicao){
+  const parcelasResp=await sb.from('parcelas_credito').select('id,numero_parcela,total_parcelas,valor,status,aluno_codigo').eq('pagamento_id',id);
+  if(parcelasResp.error){alert('Erro ao consultar parcelas: '+parcelasResp.error.message);return;}
+  const creditos=[...document.querySelectorAll('#edPagamentoFormas .payment-row')].filter(l=>l.querySelector('select').value==='Crédito parcelado');
+  if(creditos.length!==1){
+   const legadoSemFormas=(f.data||[]).length===0 && parcelasResp.data.length>0;
+   window.edPagamentoAtual.parcelamentoLegadoSemFormas=legadoSemFormas;
+   window.edPagamentoAtual.parcelasLegadasQuantidade=parcelasResp.data.length;
+   const somaParcelasCentavos=(parcelasResp.data||[]).reduce((acc,z)=>acc+Math.round(Number(z.valor)*100),0);
+   const totalOriginalCentavos=Math.round(Number(x.valor_total)*100);
+   const parcelasIntegrais=legadoSemFormas
+     && parcelasResp.data.length<=48
+     && parcelasResp.data.every(z=>z.status==='Prevista' && String(z.aluno_codigo)===String(x.aluno_codigo) && Number.isFinite(Number(z.valor)) && Number(z.valor)>0)
+     && somaParcelasCentavos===totalOriginalCentavos;
+   window.edPagamentoAtual.formaParceladaInconsistente=!parcelasIntegrais;
+   // Do not present a misleading default payment method on installment plans.
+   for(const linha of document.querySelectorAll('#edPagamentoFormas .payment-row')){
+    linha.querySelector('select').value='';
+    linha.querySelector('input:not(.ed-numero-parcelas)').value='';
+    atualizarVisibilidadeParcelasEdicao(linha);
+   }
+   document.getElementById('edPagamentoDependencias').textContent=parcelasIntegrais?'Parcelamento antigo identificado: '+parcelasResp.data.length+' parcelas previstas, com valor total conferido. Preencha os novos dados, valide e confira os vínculos antes de salvar.':legadoSemFormas?'Parcelamento antigo com dados divergentes ou parcelas já recebidas. Salvamento bloqueado por segurança.':'Atenção: as formas registradas não identificam um único Crédito parcelado. Edição bloqueada para proteger os dados; confira as formas exibidas.';
+  }else{creditos[0].querySelector('.ed-numero-parcelas').value=String(parcelasResp.data.length);}
+ }
+ if(!(f.data||[]).length)adicionarFormaEdicaoPagamento();
+ atualizarResumoEdicaoPagamento();
+ atualizarPrevisaoParcelasEdicao();
+ document.getElementById('edPagamentoValidacao').textContent='Clique em VALIDAR DADOS para conferir o preenchimento.';
+ document.getElementById('edPagamentoModal').classList.remove('hidden');
+}
+// Atualiza o preço ao trocar produto, quantidade ou tipo de avaliação.
+// Mantém a distribuição proporcional quando houver pagamento misto.
+function atualizarCampoPersonalMensalidadeEdicao(){
+ const sel=document.getElementById('edMensalidadePlano');
+ const plano=(window.edMensalidadeCatalogo||[]).find(z=>String(z.id)===String(sel.value));
+ const personal=Boolean(window.edMensalidadePersonal);
+ document.getElementById('edMensalidadePersonalBox').classList.toggle('hidden',!personal);
+ if(personal && plano){
+  const aluno=alunos.find(a=>String(a.codigo)===String(window.edPagamentoAtual?.alunoCodigo));
+  const mensal=/^mensal(?:idade)?$/i.test(String(plano.nome||'').trim());
+  // O valor individual permanece editável, sem sobrescrever a digitação.
+ }
+}
+function sugerirValorPlanoMensalidade(){
+ const plano=(window.edMensalidadeCatalogo||[]).find(z=>String(z.id)===String(document.getElementById('edMensalidadePlano').value));
+ if(window.edMensalidadePersonal && plano){
+  const aluno=alunos.find(a=>String(a.codigo)===String(window.edPagamentoAtual?.alunoCodigo));
+  if(/^mensal(?:idade)?$/i.test(String(plano.nome||'').trim()) && Number(aluno?.valor_personal_mensal)>0){
+   document.getElementById('edMensalidadePersonalValor').value=Number(aluno.valor_personal_mensal).toFixed(2);
+  }
+ }
+ atualizarPrecoItemEdicao();
+}
+function atualizarPrecoItemEdicao(){
+ const atual=window.edPagamentoAtual;
+ if(!atual)return;
+ let novoTotal;
+ if(atual.tipo==='venda'){
+  const id=String(document.getElementById('edVendaProduto').value);
+  const produto=(window.edVendaCatalogoPrecos||[]).find(x=>String(x.id)===id);
+  const qtd=Number(document.getElementById('edVendaQtd').value);
+  if(!produto||!Number.isInteger(qtd)||qtd<=0)return invalidarConferenciaEdicao();
+  novoTotal=Number(produto.valor)*qtd;
+ }else if(atual.tipo==='Avaliação'){
+  const id=String(document.getElementById('edAvaliacaoTipo').value);
+  const tipo=(window.edAvaliacaoCatalogoPrecos||[]).find(x=>String(x.id)===id);
+  if(!tipo)return invalidarConferenciaEdicao();
+  novoTotal=Number(tipo.valor);
+ }else if(atual.tipo==='mensalidade'){
+  const plano=(window.edMensalidadeCatalogo||[]).find(z=>String(z.id)===String(document.getElementById('edMensalidadePlano').value));
+  if(!plano)return invalidarConferenciaEdicao();
+  atualizarCampoPersonalMensalidadeEdicao();
+  novoTotal=(window.edMensalidadePersonal?Number(document.getElementById('edMensalidadePersonalValor').value):Number(plano.valor))+(document.getElementById('edMensalidadeTaxa').checked?20:0);
+ }else return;
+ if(!Number.isFinite(novoTotal)||novoTotal<=0)return invalidarConferenciaEdicao();
+ const centavos=Math.round(novoTotal*100);
+ const campoTotal=document.getElementById('edPagamentoValor');
+ const entradas=[...document.querySelectorAll('#edPagamentoFormas .payment-row input:not(.ed-numero-parcelas)')];
+ const valores=entradas.map(el=>Math.max(0,Number(el.value)||0));
+ const soma=valores.reduce((a,b)=>a+b,0);
+ campoTotal.value=(centavos/100).toFixed(2);
+ if(entradas.length===1)entradas[0].value=(centavos/100).toFixed(2);
+ else if(entradas.length>1){
+  let distribuidos=0;
+  entradas.forEach((el,i)=>{
+   const parte=i===entradas.length-1?centavos-distribuidos:
+    Math.round(centavos*(soma>0?valores[i]/soma:1/entradas.length));
+   distribuidos+=parte;
+   el.value=(parte/100).toFixed(2);
+  });
+ }
+ atualizarResumoEdicaoPagamento();
+}
+function adicionarFormaEdicaoPagamento(forma='',valor=''){
+ const container=document.getElementById('edPagamentoFormas');
+ const linha=document.createElement('div');linha.className='payment-row';
+ const select=document.createElement('select');select.setAttribute('aria-label','Forma de pagamento');
+ select.onchange=()=>{
+  atualizarVisibilidadeParcelasEdicao(linha);
+  // Parcelamentos legados: recupera apenas a quantidade para facilitar a conferência.
+  // Não cria formas de pagamento e não libera o salvamento.
+  if(select.value==='Crédito parcelado' && window.edPagamentoAtual?.parceladoEdicao && window.edPagamentoAtual?.parcelamentoLegadoSemFormas){
+   const qtd=Number(window.edPagamentoAtual.parcelasLegadasQuantidade||0);
+   if(qtd>0)linha.querySelector('.ed-numero-parcelas').value=String(qtd);
+  }
+  const campo=linha.querySelector('input:not(.ed-numero-parcelas)');
+  if(select.value && !campo.value.trim()){
+   const total=Math.round(Number(document.getElementById('edPagamentoValor').value||0)*100);
+   const outros=[...container.querySelectorAll('.payment-row')].filter(l=>l!==linha)
+    .reduce((s,l)=>s+Math.round(Number(l.querySelector('input:not(.ed-numero-parcelas)').value||0)*100),0);
+   campo.value=(Math.max(0,total-outros)/100).toFixed(2);
+  }
+  atualizarResumoEdicaoPagamento();
+ };
+ const opcoes=['Dinheiro','PIX (Academia)','PIX (Eliane)','PIX (Stéfano)','Débito','Crédito','Crédito parcelado'];
+ const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Selecione';select.appendChild(placeholder);
+ if(forma&&!opcoes.includes(forma))opcoes.push(forma);
+ opcoes.forEach(m=>{const opt=document.createElement('option');opt.value=m;opt.textContent=m;select.appendChild(opt)});
+ select.value=forma||'';
+ const input=document.createElement('input');input.type='number';input.min='0';input.step='0.01';input.value=valor===''?'':Number(valor).toFixed(2);input.setAttribute('aria-label','Valor da forma de pagamento');input.oninput=atualizarResumoEdicaoPagamento;
+ const parcelas=document.createElement('input');parcelas.type='number';parcelas.min='1';parcelas.max='48';parcelas.step='1';parcelas.value='1';parcelas.className='ed-numero-parcelas';parcelas.setAttribute('aria-label','Quantidade de parcelas');parcelas.oninput=atualizarResumoEdicaoPagamento;
+ const remover=document.createElement('button');remover.type='button';remover.className='secondary';remover.textContent='Remover';remover.onclick=()=>{linha.remove();atualizarResumoEdicaoPagamento()};
+ linha.append(select,input,parcelas,remover);container.appendChild(linha);atualizarVisibilidadeParcelasEdicao(linha);atualizarResumoEdicaoPagamento();
+}
+function atualizarVisibilidadeParcelasEdicao(linha){
+ const credito=linha.querySelector('select').value==='Crédito parcelado';
+ linha.querySelector('.ed-numero-parcelas').classList.toggle('hidden',!credito);
+ linha.style.gridTemplateColumns=credito?'minmax(130px,1fr) 110px 105px auto':'';
+}
+function invalidarConferenciaEdicao(){
+ if(window.edPagamentoAtual){window.edPagamentoAtual.validacaoOk=false;}
+ const botao=document.getElementById('edPagamentoSalvar');if(botao)botao.disabled=true;
+}
+function atualizarResumoEdicaoPagamento(){
+ invalidarConferenciaEdicao();
+ const total=Number(document.getElementById('edPagamentoValor').value||0);
+ const soma=[...document.querySelectorAll('#edPagamentoFormas .payment-row input:not(.ed-numero-parcelas)')].reduce((a,el)=>a+Number(el.value||0),0);
+ const diferenca=Math.round((total-soma)*100)/100;
+ document.getElementById('edPagamentoResumo').textContent='Total: '+money(total)+' | Formas: '+money(soma)+' | Diferença: '+money(diferenca)+' — Confira antes de salvar.';
+ atualizarPrevisaoParcelasEdicao();
+}
+function atualizarPrevisaoParcelasEdicao(){
+ const painel=document.getElementById('edParcelasResumo');
+ const linhas=[...document.querySelectorAll('#edPagamentoFormas .payment-row')].filter(l=>l.querySelector('select').value==='Crédito parcelado');
+ if(!linhas.length){painel.classList.add('hidden');painel.textContent='';return;}
+ painel.classList.remove('hidden');painel.replaceChildren();
+ const titulo=document.createElement('strong');titulo.textContent='Previsão das parcelas do cartão';painel.appendChild(titulo);
+ const data=document.getElementById('edPagamentoData').value;
+ for(const linha of linhas){
+  const qtd=Number(linha.querySelector('.ed-numero-parcelas').value);
+  const valor=Number(linha.querySelector('input:not(.ed-numero-parcelas)').value);
+  if(!Number.isInteger(qtd)||qtd<1||qtd>48||!Number.isFinite(valor)||valor<=0){const d=document.createElement('div');d.textContent='Informe o valor e a quantidade de parcelas.';painel.appendChild(d);continue;}
+  const centavos=Math.round(valor*100),base=Math.floor(centavos/qtd),resto=centavos%qtd;
+  const sub=document.createElement('div');sub.style.marginTop='8px';sub.textContent=qtd+' parcela(s) — '+money(valor)+' no total';painel.appendChild(sub);
+  for(let i=0;i<qtd;i++){
+   const d=document.createElement('div');d.style.fontSize='13px';d.style.marginTop='4px';
+   const prevista=/^\d{4}-\d{2}-\d{2}$/.test(data)?addMonthsISO(data,i):'';
+   d.textContent=(i+1)+'ª parcela: '+money((base+(i<resto?1:0))/100)+(prevista?' — previsão '+prevista.split('-').reverse().join('/'):'');painel.appendChild(d);
+  }
+ }
+ const obs=document.createElement('small');obs.className='muted';obs.textContent='Previsões antes de salvar; não representam recebimentos confirmados.';painel.appendChild(obs);
+}
+function validarEdicaoPagamento(){
+ const erros=[];
+ const data=document.getElementById('edPagamentoData').value;
+ const campoTotal=document.getElementById('edPagamentoValor');
+ const total=Number(campoTotal.value);
+ const linhas=[...document.querySelectorAll('#edPagamentoFormas .payment-row')];
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(data)||Number.isNaN(new Date(data+'T12:00:00').getTime()))erros.push('Informe uma data válida.');
+ if(campoTotal.value.trim()===''||!Number.isFinite(total)||total<=0||Math.round(total*100)!==total*100&&Math.abs(Math.round(total*100)-total*100)>0.000001)erros.push('Informe um valor total positivo, com até duas casas decimais.');
+ if(!linhas.length)erros.push('Informe pelo menos uma forma de pagamento.');
+ let centavos=0;let creditoParcelado=false;
+ for(const [i,linha] of linhas.entries()){
+  const forma=linha.querySelector('select').value;
+  const campo=linha.querySelector('input');const valor=Number(campo.value);
+  if(!forma||campo.value.trim()===''||!Number.isFinite(valor)||valor<=0||Math.abs(valor*100-Math.round(valor*100))>0.000001)erros.push('Forma '+(i+1)+': informe valor positivo com até duas casas decimais.');
+  else centavos+=Math.round(valor*100);
+  if(forma==='Crédito parcelado'){
+   creditoParcelado=true;
+   const qtd=Number(linha.querySelector('.ed-numero-parcelas').value);
+   if(!Number.isInteger(qtd)||qtd<1||qtd>48)erros.push('Informe entre 1 e 48 parcelas.');
+  }
+ }
+ if(Number.isFinite(total)&&Math.round(total*100)!==centavos)erros.push('A soma das formas de pagamento deve ser igual ao valor total.');
+ if(creditoParcelado&&window.edPagamentoAtual?.tipo!=='mensalidade')erros.push('Crédito parcelado nesta edição está disponível somente para mensalidades.');
+ if(window.edPagamentoAtual?.parceladoEdicao && linhas.filter(l=>l.querySelector('select').value==='Crédito parcelado').length!==1)erros.push('Informe exatamente uma forma Crédito parcelado.');
+ if(window.edPagamentoAtual?.parceladoEdicao && window.edPagamentoAtual.taxa!==0)erros.push('Parcelamento com taxa de matrícula: edição não habilitada.');
+ const atual=window.edPagamentoAtual;
+ if(!atual||(atual.tipo!=='mensalidade'&&atual.tipo!=='Avaliação'&&atual.tipo!=='venda')||(atual.taxa!==0&&atual.tipo!=='mensalidade'))erros.push('Tipo de lançamento não habilitado para edição.');
+  if(atual?.tipo==='mensalidade'&&!document.getElementById('edMensalidadePlano').value)erros.push('Selecione o plano.');
+  if(atual?.tipo==='venda'){
+   if(!document.getElementById('edVendaAluno').value.trim())erros.push('Informe o código do aluno.');
+   if(!document.getElementById('edVendaProduto').value)erros.push('Selecione o produto.');
+   const qtd=Number(document.getElementById('edVendaQtd').value);
+   if(!Number.isSafeInteger(qtd)||qtd<1)erros.push('Quantidade inválida.');
+  }
+  if(atual?.tipo==='Avaliação'){
+    const codigo=document.getElementById('edAvaliacaoAluno').value.trim();
+    if(!codigo)erros.push('Informe o código do aluno.');
+    if(!document.getElementById('edAvaliacaoTipo').value)erros.push('Selecione o tipo de avaliação.');
+  }
+ if(atual?.formaParceladaInconsistente)erros.push('As formas originais do parcelamento precisam ser conferidas antes da edição.');
+ if(atual){atual.validacaoOk=erros.length===0;document.getElementById('edPagamentoSalvar').disabled=!(atual.validacaoOk&&atual.conferenciaOk);}
+ const alvo=document.getElementById('edPagamentoValidacao');
+ alvo.textContent=erros.length?'Validação pendente: '+erros.join(' '):'Dados validados. Confira os vínculos; se estiverem corretos, clique em SALVAR PAGAMENTO.';
+ alvo.className='status '+(erros.length?'error':'ok');
+}
+// Consulta de segurança: somente SELECT. Não altera registros nem libera salvamento.
+async function conferirDependenciasEdicaoPagamento(){
+ const alvo=document.getElementById('edPagamentoDependencias');
+ const id=window.edPagamentoAtual?.id;
+ if(!id){alvo.textContent='Abra novamente um pagamento para consultar os vínculos.';alvo.className='status warn';return;}
+ if(!sb){alvo.textContent='Conexão com Supabase indisponível.';alvo.className='status error';return;}
+ alvo.textContent='Consultando vínculos do pagamento #'+id+' (somente leitura)...';
+ const tabelas=[['pagamento_formas','Formas de pagamento'],['parcelas_credito','Parcelas de crédito'],['movimentos_estoque','Movimentos de estoque'],['retornos_alunos','Histórico de retornos']];
+ const resultados=[];let consultasOk=true;let bloqueado=false;
+ const atual=window.edPagamentoAtual;
+ for(const [tabela,nome] of tabelas){
+  try{
+   const {data,error}=await sb.from(tabela).select('id').eq('pagamento_id',id).limit(1000);
+   if(error)consultasOk=false;
+   if(!error&&tabela!=='pagamento_formas'&&data.length&&!(atual?.parceladoEdicao&&tabela==='parcelas_credito')&&!(atual?.tipo==='venda'&&tabela==='movimentos_estoque'&&data.length===1))bloqueado=true;
+   resultados.push(error?nome+': consulta indisponível ('+error.message+')':nome+': '+data.length+(data.length===1000?' ou mais':'')+' registro(s)');
+  }catch(e){resultados.push(nome+': consulta indisponível ('+e.message+')')}
+ }
+ if(atual&&atual.id===id){atual.conferenciaOk=consultasOk&&!bloqueado&&!atual.formaParceladaInconsistente&&(atual.tipo==='mensalidade'||atual.tipo==='Avaliação'||atual.tipo==='venda')&&(atual.taxa===0||atual.tipo==='mensalidade');document.getElementById('edPagamentoSalvar').disabled=!(atual.conferenciaOk&&atual.validacaoOk);}
+ alvo.textContent='Vínculos do pagamento #'+id+' — '+resultados.join(' | ')+(consultasOk&&!bloqueado&&!atual?.formaParceladaInconsistente?' | Conferência concluída. Você pode salvar após validar os dados.':' | Conferência concluída; salvamento ainda bloqueado por segurança.');
+ alvo.className='status';
+}
+async function salvarEdicaoPagamento(){
+ const atual=window.edPagamentoAtual;
+ if(!atual||!atual.conferenciaOk||!atual.validacaoOk){alert('Confira os vínculos e valide os dados antes de salvar.');return}
+ validarEdicaoPagamento();
+ if(!atual.validacaoOk)return;
+ const botao=document.getElementById('edPagamentoSalvar');botao.disabled=true;
+ const data=document.getElementById('edPagamentoData').value;
+ const valor=Number(document.getElementById('edPagamentoValor').value);
+ const formas=[...document.querySelectorAll('#edPagamentoFormas .payment-row')].map(l=>({forma_pagamento:l.querySelector('select').value,valor:Number(l.querySelector('input:not(.ed-numero-parcelas)').value),...(atual.tipo==='mensalidade'&&l.querySelector('select').value==='Crédito parcelado'?{numero_parcelas:Number(l.querySelector('.ed-numero-parcelas').value)}:{})}));
+ if(!confirm('Confirma alterar o pagamento nº '+atual.id+' para '+money(valor)+' em '+data.split('-').reverse().join('/')+'?\n\nEsta operação modifica o registro no Supabase.')){botao.disabled=false;return}
+ if(!await confirmarSenhaAdministrador()){botao.disabled=false;return}
+ try{
+  const params=atual.tipo==='venda'?{p_pagamento_id:atual.id,p_aluno_codigo:document.getElementById('edVendaAluno').value.trim(),p_produto_id:Number(document.getElementById('edVendaProduto').value),p_quantidade:Number(document.getElementById('edVendaQtd').value),p_data:data,p_valor:valor,p_formas:formas}:atual.tipo==='Avaliação' ? {p_pagamento_id:atual.id,p_aluno_codigo:document.getElementById('edAvaliacaoAluno').value.trim(),p_tipo_avaliacao_id:Number(document.getElementById('edAvaliacaoTipo').value),p_data:data,p_valor:valor,p_formas:formas} : {p_pagamento_id:atual.id,p_plano_id:Number(document.getElementById('edMensalidadePlano').value),p_data:data,p_valor:valor,p_formas:formas,p_cobrar_taxa:document.getElementById('edMensalidadeTaxa').checked};
+  const {error}=await sb.rpc(atual.parceladoEdicao?'vitturi_editar_parcelamento_v1':atual.tipo==='venda'?'vitturi_editar_venda':atual.tipo==='Avaliação'?'vitturi_editar_avaliacao':'vitturi_editar_mensalidade_plano',params);
+  if(error)throw error;
+  alert('Pagamento atualizado com sucesso.');fecharEdicaoPagamento();await loadAll();await gerarRelatorio();
+ }catch(e){alert('Não foi possível salvar: '+(e.message||e));botao.disabled=false}
+}
+function fecharEdicaoPagamento(){document.getElementById('edPagamentoModal').classList.add('hidden')}
+async function gerarRelatorio(){
+ if(!sb)return;let mode=document.getElementById('rPeriodo').value,today=localDate(),start=today,end=today;
+ if(mode==='month'){let d=new Date();start=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';end=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10)}
+ if(mode==='custom'){start=document.getElementById('rFrom').value;end=document.getElementById('rTo').value}
+ if(mode==='specific_month'){const m=document.getElementById('rMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return;start=m+'-01';end=addMonthsISO(start,1);end=addDaysISO(end,-1)}
+ if(!start||!end)return;
+ const p=await sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false});
+ if(p.error){document.getElementById('rFiltroInfo').textContent='Erro ao consultar pagamentos: '+p.error.message;return}
+ const busca=document.getElementById('rAlunoBusca').value.trim().toLocaleLowerCase('pt-BR');
+ const codigos=busca?new Set(alunos.filter(a=>String(a.codigo).toLocaleLowerCase('pt-BR').includes(busca)||String(a.nome||'').toLocaleLowerCase('pt-BR').includes(busca)).map(a=>String(a.codigo))):null;
+ const payments=(p.data||[]).filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+ document.getElementById('rFiltroInfo').textContent=busca?`${payments.length} pagamento(s) encontrado(s) para a pesquisa neste período. Os totais de pagamentos abaixo consideram apenas esses lançamentos.`:'Exibindo pagamentos de todos os alunos no período.';
+ let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
+ let total=payments.reduce((s,x)=>s+Number(x.valor_total||0),0),mens=payments.filter(x=>x.tipo==='mensalidade').reduce((s,x)=>s+Number(x.valor_total||0)-Number(x.taxa_matricula_valor||0),0),vendas=payments.filter(x=>String(x.tipo||'').trim().toLocaleLowerCase('pt-BR')==='venda'&&String(x.status_recebimento||'').trim().toLocaleLowerCase('pt-BR')!=='pendente').reduce((s,x)=>s+Number(x.valor_total||0),0),avs=payments.filter(x=>x.tipo==='avaliacao').reduce((s,x)=>s+Number(x.valor_total||0),0);
+ document.getElementById('rTaxa').textContent=money(payments.reduce((s,x)=>s+Number(x.taxa_matricula_valor||0),0));document.getElementById('rTotal').textContent=money(total);document.getElementById('rMens').textContent=money(mens);document.getElementById('rVendas').textContent=money(vendas);document.getElementById('rAv').textContent=money(avs);
+ const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
+ const mv=await sb.from('movimentos_estoque').select('quantidade,custo_unitario,valor_unitario,tipo,data_movimento').eq('tipo','Venda').gte('data_movimento',start).lte('data_movimento',end);const custoVendido=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.custo_unitario||0),0);
+ document.getElementById('rCompras').textContent=money(compraTotal);document.getElementById('rCustoVendas').textContent=money(custoVendido);const receitaEstoque=(mv.data||[]).reduce((sum,x)=>sum+Math.abs(Number(x.quantidade||0))*Number(x.valor_unitario||0),0);document.getElementById('rLucroBruto').textContent=money(receitaEstoque-custoVendido);
+ let meth={};forms.forEach(f=>meth[f.forma_pagamento]=(meth[f.forma_pagamento]||0)+Number(f.valor));document.getElementById('rMethods').innerHTML=Object.entries(meth).map(([k,v])=>`<div style="display:flex;justify-content:space-between;max-width:450px"><span>${esc(formaBR(k))}</span><b>${money(v)}</b></div>`).join('')||'Nenhum pagamento no período.';
+ // Exibição por data prevista: parcelas vencidas/na data entram em Lançamentos;
+ // parcelas futuras permanecem na Previsão. Nenhum registro é gravado no banco.
+ const limiteParcelas=localDate();
+ const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');
+ if(pr.error){document.getElementById('rFiltroInfo').textContent='Não foi possível consultar as parcelas: '+pr.error.message;return;}
+ const parcelas=pr.data||[];
+ const parcelasVisiveis=parcelas.filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+ // Identifica pagamentos parcelados também quando a primeira parcela está fora do período.
+ const idsPeriodo=payments.map(x=>x.id);
+ const pagamentosComParcelas=new Set();
+ for(let i=0;i<idsPeriodo.length;i+=100){
+   const r=await sb.from('parcelas_credito').select('pagamento_id').in('pagamento_id',idsPeriodo.slice(i,i+100));
+   if(r.error){document.getElementById('rFiltroInfo').textContent='Não foi possível conferir vínculos das parcelas: '+r.error.message;return;}
+   (r.data||[]).forEach(x=>pagamentosComParcelas.add(Number(x.pagamento_id)));
+ }
+ // Agrupamento visual apenas com vínculo comprovado pelo atendimento integrado.
+ // Consulta paginada: o Supabase pode limitar a resposta padrão a 1000 linhas.
+ const gruposMatricula=new Map();
+ const matriculasAgrupadas=new Set();
+ const porId=new Map(payments.map(x=>[String(x.id),x]));
+ const normalizaTipo=t=>String(t||'').trim().toLocaleLowerCase('pt-BR');
+ const registraGrupo=registro=>{
+   let vinculados=registro.pagamento_ids;
+   if(typeof vinculados==='string'){try{vinculados=JSON.parse(vinculados)}catch(_){return}}
+   if(!Array.isArray(vinculados)||vinculados.length!==2)return;
+   const itens=vinculados.map(id=>porId.get(String(id)));
+   if(itens.some(x=>!x))return;
+   const mensal=itens.find(x=>normalizaTipo(x.tipo)==='mensalidade');
+   const matricula=itens.find(x=>normalizaTipo(x.tipo)==='taxa de matrícula');
+   if(!mensal||!matricula||String(mensal.id)===String(matricula.id))return;
+   if(String(mensal.aluno_codigo)!==String(matricula.aluno_codigo)||mensal.data_pagamento!==matricula.data_pagamento)return;
+   if(pagamentosComParcelas.has(Number(mensal.id))||pagamentosComParcelas.has(Number(matricula.id)))return;
+   if(gruposMatricula.has(String(mensal.id))||matriculasAgrupadas.has(String(matricula.id)))return;
+   gruposMatricula.set(String(mensal.id),matricula);
+   matriculasAgrupadas.add(String(matricula.id));
+ };
+ try{
+   const inicio=addDaysISO(start,-1)+'T00:00:00';
+   const fim=addDaysISO(end,1)+'T23:59:59';
+   for(let offset=0;offset<10000;offset+=500){
+     const resp=await sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').gte('criado_em',inicio).lte('criado_em',fim).order('criado_em',{ascending:true}).range(offset,offset+499);
+     if(resp.error)break;
+     (resp.data||[]).forEach(registraGrupo);
+     if((resp.data||[]).length<500)break;
+   }
+   // Busca pontual para vínculos não retornados pela listagem, inclusive registros antigos.
+   const pendentes=payments.filter(x=>normalizaTipo(x.tipo)==='mensalidade'&&!gruposMatricula.has(String(x.id))&&
+     payments.some(y=>normalizaTipo(y.tipo)==='taxa de matrícula'&&String(y.aluno_codigo)===String(x.aluno_codigo)&&y.data_pagamento===x.data_pagamento));
+   for(const mensal of pendentes){
+     const resp=await sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').contains('pagamento_ids',[String(mensal.id)]).limit(20);
+     if(!resp.error)(resp.data||[]).forEach(registraGrupo);
+   }
+ }catch(_){/* Sem vínculo confirmado, mantém os lançamentos separados. */}
+ const nomeAluno=codigo=>esc(alunos.find(a=>String(a.codigo)===String(codigo))?.nome||'Aluno não localizado');
+ const linhasOriginais=payments.filter(x=>!pagamentosComParcelas.has(Number(x.id))&&!matriculasAgrupadas.has(String(x.id))).map(x=>{
+   const matricula=gruposMatricula.get(String(x.id));
+   const valorExibido=Number(x.valor_total||0)+(matricula?Number(matricula.valor_total||0):0);
+   const formasExibidas=forms.filter(f=>f.pagamento_id===x.id||(matricula&&f.pagamento_id===matricula.id));
+   const formasTotais=new Map();
+   for(const f of formasExibidas){const nome=formaBR(f.forma_pagamento);formasTotais.set(nome,(formasTotais.get(nome)||0)+Number(f.valor||0));}
+   const formaTexto=[...formasTotais].map(([nome])=>esc(nome)).join(' + ')||'—';
+   const descricao=esc(String(x.tipo||'').toLowerCase()==='venda'?String(x.descricao||'').replace(/^(.+?)\s+x\s*(\d+)$/i,(_,produto,qtd)=>`${qtd} x ${produto}`):x.descricao)+(matricula?' + Taxa de matrícula':Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula':'');
+   // Um único controle visual; as ações permanecem individuais para evitar exclusão parcial acidental.
+   const acoes=matricula
+     ? `<button type="button" class="secondary" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="gerenciarLancamentoAgrupado(${Number(x.id)},${Number(matricula.id)},'excluir')">Excluir</button>`
+     : `<button type="button" class="secondary" onclick="visualizarAcaoPagamento(${Number(x.id)},'editar')">Editar</button> <button type="button" class="danger" onclick="visualizarAcaoPagamento(${Number(x.id)},'excluir')">Excluir</button>`;
+   const pagamentoTexto=x.status_recebimento==='Pendente'?(x.tipo==='Taxa de matrícula'?'<strong>Incluída nas parcelas do cartão</strong>':'<strong>Pendente — vence '+dataBR(x.data_vencimento)+'</strong>'):formaTexto;
+   return {data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${descricao}</td><td>${money(valorExibido)}</td><td>${pagamentoTexto}</td><td>Única</td><td>${acoes}</td></tr>`};
+ });
+ const parcelasLancadas=parcelasVisiveis.filter(x=>x.data_prevista<=limiteParcelas);
+  // Consulta apenas para mostrar o nome do plano; não altera pagamentos nem parcelas.
+  const planoPorPagamento=new Map(payments.map(x=>[Number(x.id),x]));
+  const idsPlanos=[...new Set(parcelasLancadas.map(x=>Number(x.pagamento_id)).filter(id=>Number.isSafeInteger(id)&&!planoPorPagamento.has(id)))];
+  for(let i=0;i<idsPlanos.length;i+=100){
+    const rp=await sb.from('Pagamentos').select('id,descricao,taxa_matricula_valor').in('id',idsPlanos.slice(i,i+100));
+    if(!rp.error)(rp.data||[]).forEach(x=>planoPorPagamento.set(Number(x.id),x));
+  }
+  const linhasParceladas=parcelasLancadas.map(x=>{
+    const pg=planoPorPagamento.get(Number(x.pagamento_id));
+    const plano=pg?(String(pg.descricao||'Plano')+(Number(pg.taxa_matricula_valor||0)>0?' + Taxa de matrícula':'')):'Plano não identificado';
+    const parcelaTexto=`${Number(x.numero_parcela)}/${Number(x.total_parcelas)}`;
+    return {data:x.data_prevista,html:`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>Mensalidade</td><td>${esc(plano)}</td><td>${money(x.valor)}</td><td>Crédito parcelado</td><td>${parcelaTexto}</td><td><button type="button" class="secondary" onclick="editarPlanoParceladoSeguro(${Number(x.pagamento_id)})">Editar</button> <button type="button" class="danger" onclick="excluirPlanoParceladoSeguro(${Number(x.pagamento_id)})">Excluir</button></td></tr>`};
+  });
+ document.getElementById('rList').innerHTML=[...linhasOriginais,...linhasParceladas].sort((a,b)=>b.data.localeCompare(a.data)).map(x=>x.html).join('');
+ const parcelasFuturas=parcelasVisiveis.filter(x=>x.data_prevista>limiteParcelas);
+ document.getElementById('rParcelasSummary').textContent=`${parcelasFuturas.length} parcela(s) programada(s) após ${dataBR(limiteParcelas)} — ${money(parcelasFuturas.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
+ document.getElementById('rParcelasList').innerHTML=parcelasFuturas.map(x=>`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td></tr>`).join('');
+ // Separar movimento registrado de recebimento efetivo por data de repasse.
+ // As parcelas recebidas podem ter sido previstas para outro mês.
+ const recebidasResp=await sb.from('parcelas_credito').select('id,aluno_codigo,valor,data_recebida,status').eq('status','Recebida').gte('data_recebida',start).lte('data_recebida',end);
+ const todasParcelasResp=await sb.from('parcelas_credito').select('id,aluno_codigo,valor,status,data_prevista').gte('data_prevista',start).lte('data_prevista',end);
+ const financeiroInfo=document.getElementById('rFinanceiroInfo');
+ const recebidas=recebidasResp.data||[];
+ const recebidasFiltradas=recebidas.filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+ const previstasFiltradas=(todasParcelasResp.data||[]).filter(x=>(x.status!=='Recebida')&&(!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca)));
+ const formasParceladas=new Set(['crédito parcelado','credito parcelado','cartão de crédito parcelado','cartao de credito parcelado']);
+ const formaParcelada=f=>formasParceladas.has(String(f.forma_pagamento||'').trim().toLocaleLowerCase('pt-BR'));
+ const pagamentosImediatos=forms.filter(f=>!formaParcelada(f)).reduce((v,f)=>v+Number(f.valor||0),0);
+  const vendasRecebidasOutroPeriodo=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').eq('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).lt('data_pagamento',start);
+  const vendasRecebidasPosteriores=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').eq('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).gt('data_pagamento',end);
+  const recebimentosVendas=[...(vendasRecebidasOutroPeriodo.data||[]),...(vendasRecebidasPosteriores.data||[])].filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca)).reduce((v,x)=>v+Number(x.valor_total||0),0);
+  const formasRecebidasForaPeriodo=payments.filter(x=>x.tipo==='venda'&&x.status_recebimento==='Recebido'&&x.data_recebimento&& (x.data_recebimento<start||x.data_recebimento>end)).map(x=>x.id);
+  const formasRecebidasForaSet=new Set(formasRecebidasForaPeriodo);
+  const pagamentosImediatosCorrigidos=forms.filter(f=>!formaParcelada(f)&&!formasRecebidasForaSet.has(f.pagamento_id)).reduce((v,f)=>v+Number(f.valor||0),0)+recebimentosVendas;
+ const totalRecebidoParcelas=recebidasFiltradas.reduce((v,x)=>v+Number(x.valor||0),0);
+ const totalPrevisto=previstasFiltradas.reduce((v,x)=>v+Number(x.valor||0),0);
+ document.getElementById('rRegistrado').textContent=money(total);
+ document.getElementById('rEfetivo').textContent=money(pagamentosImediatosCorrigidos+totalRecebidoParcelas);
+ document.getElementById('rPendente').textContent=money(totalPrevisto);
+ document.getElementById('rParcelasRecebidas').textContent=money(totalRecebidoParcelas);
+ if(recebidasResp.error||todasParcelasResp.error){
+  financeiroInfo.textContent='Atenção: não foi possível consultar todas as parcelas. Os valores de recebimento podem estar incompletos.';
+  document.getElementById('rEfetivo').textContent='Indisponível';
+  document.getElementById('rPendente').textContent='Indisponível';
+  document.getElementById('rParcelasRecebidas').textContent='Indisponível';
+ }else{
+  financeiroInfo.textContent='Recebimentos imediatos: '+money(pagamentosImediatosCorrigidos)+'; parcelas com repasse confirmado neste período: '+money(totalRecebidoParcelas)+'. Parcelas ainda previstas são exibidas por data prevista e não representam saldo total a receber. Marcar uma parcela como recebida utiliza a data de hoje; confira se corresponde ao repasse real.';
+ }
+ const wh=await sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento').eq('status','Recebido').gte('data_recebimento',start).lte('data_recebimento',end);
+ const whTotal=(wh.data||[]).reduce((t,r)=>t+Number(r.valor_recebido||0),0);
+ document.getElementById('rWellHubRecebido').textContent=wh.error?'Indisponível':money(whTotal);
+ if(!wh.error&&!busca){
+  if(!recebidasResp.error&&!todasParcelasResp.error)document.getElementById('rEfetivo').textContent=money(pagamentosImediatosCorrigidos+totalRecebidoParcelas+whTotal);
+  financeiroInfo.textContent+=' WellHub depositado no período: '+money(whTotal)+' (sem duplicar check-ins).';
+ }else if(busca){financeiroInfo.textContent+=' WellHub não integra os totais filtrados por aluno; o depósito geral aparece em cartão separado.';}
+ else{financeiroInfo.textContent+=' Atenção: não foi possível consultar os depósitos WellHub.';if(!recebidasResp.error&&!todasParcelasResp.error)document.getElementById('rEfetivo').textContent='Indisponível';}
+ const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];const porAlunoMes={};const ordinais=new Map();[...gs].sort((a,b)=>String(a.data_checkin).localeCompare(String(b.data_checkin))||Number(a.id)-Number(b.id)).forEach(x=>{const k=String(x.aluno_codigo).trim()+'|'+String(x.data_checkin).slice(0,7);porAlunoMes[k]=(porAlunoMes[k]||0)+1;ordinais.set(x.id,porAlunoMes[k]);});
+ // Teste 30: aplicar a mesma pesquisa por aluno aos check-ins, sem alterar os registros nem a apuração geral.
+ if(busca)gs=gs.filter(x=>codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+ const alunoUnico=busca&&codigos.size===1?alunos.find(a=>codigos.has(String(a.codigo))):null;
+ document.getElementById('rGymTitulo').textContent=busca?'GymPass / WellHub — check-ins da pesquisa':'GymPass';
+ document.getElementById('rGymSummary').textContent=g.error?'Não foi possível consultar os check-ins: '+g.error.message:(busca?(alunoUnico?alunoUnico.nome+' — '+alunoUnico.codigo+' | ':'Pesquisa: '+document.getElementById('rAlunoBusca').value.trim()+' | '):'')+`${gs.length} check-in(s) no período de ${dataBR(start)} a ${dataBR(end)} — total ${money(gs.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
+ document.getElementById('rGymList').innerHTML=gs.map(x=>{const a=alunos.find(a=>String(a.codigo)===String(x.aluno_codigo));return `<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.aluno_codigo)} — ${esc(a?.nome||'Aluno não localizado')}</td><td>${esc(Number(x.numero_checkin)>0?Number(x.numero_checkin):(ordinais.get(x.id)||1))}º</td><td>${money(x.valor)}</td><td><button type="button" class="danger" onclick="excluirCheckinWellHub(${Number(x.id)})">EXCLUIR CHECK-IN</button></td></tr>`}).join('')||'<tr><td colspan="5">Nenhum check-in encontrado para a pesquisa neste período.</td></tr>';
+}
+let codigoSelecionadoExtrato='';
+function codigoExtratoAtual(){
+ const entrada=document.getElementById('exCodigo').value.trim();
+ const a=alunos.find(a=>String(a.codigo)===codigoSelecionadoExtrato);
+ if(a && entrada===a.nome+' — '+a.codigo)return String(a.codigo);
+ const exato=alunos.find(a=>String(a.codigo)===entrada);
+ return exato?String(exato.codigo):'';
+}
+function selecionarAlunoExtrato(codigo){
+ const a=alunos.find(x=>String(x.codigo)===String(codigo));if(!a)return;
+ codigoSelecionadoExtrato=String(a.codigo);
+ document.getElementById('exCodigo').value=a.nome+' — '+a.codigo;
+ document.getElementById('exSugestoes').classList.add('hidden');
+ exLimpar();
+}
+function buscarAlunoExtrato(){
+ exLimpar();
+ const entrada=document.getElementById('exCodigo').value.trim();
+ const a=alunos.find(x=>String(x.codigo)===codigoSelecionadoExtrato);
+ if(!a||entrada!==a.nome+' — '+a.codigo)codigoSelecionadoExtrato='';
+ const q=normalizarBuscaAluno(entrada),box=document.getElementById('exSugestoes');
+ const matches=q&&!codigoExtratoAtual()?alunos.filter(a=>normalizarBuscaAluno(a.nome).includes(q)||normalizarBuscaAluno(a.codigo).includes(q)).slice(0,15):[];
+ box.replaceChildren();
+ for(const a of matches){const b=document.createElement('button');b.type='button';b.textContent=a.nome+' — código '+a.codigo;b.onclick=()=>selecionarAlunoExtrato(a.codigo);box.appendChild(b)}
+ box.classList.toggle('hidden',!matches.length);
+}
+function exLimpar(){document.getElementById('exImprimir').disabled=true;document.getElementById('exResultado').classList.add('hidden');document.getElementById('exMensagem').textContent='Clique em CONSULTAR EXTRATO para pesquisar.'}
+async function consultarExtrato(){
+   const msg=document.getElementById('exMensagem'),resultado=document.getElementById('exResultado');resultado.classList.add('hidden');document.getElementById('exGymSecao').classList.add('hidden');document.getElementById('exImprimir').disabled=true;
+ const codigo=codigoExtratoAtual(),inicio=document.getElementById('exInicio').value,fim=document.getElementById('exFim').value;
+ if(!codigo||!inicio||!fim){msg.textContent='Selecione um aluno pelo código ou nome e informe as duas datas.';return}
+ if(inicio>fim){msg.textContent='A data inicial não pode ser posterior à data final.';return}
+ const aluno=alunos.find(a=>String(a.codigo)===codigo);
+ if(!aluno){msg.textContent='Aluno não encontrado. Confira o código cadastrado.';return}
+   msg.textContent='Consultando extrato e check-ins...';
+ try{
+ const r=await sb.from('Pagamentos').select('id,aluno_codigo,tipo,descricao,valor_total,taxa_matricula_valor,data_pagamento').eq('aluno_codigo',codigo).gte('data_pagamento',inicio).lte('data_pagamento',fim).order('data_pagamento',{ascending:false});
+ if(r.error)throw r.error;
+ const pagamentos=r.data||[],ids=pagamentos.map(x=>x.id);let formas=[];
+ // Buscar as formas em lotes para evitar URLs muito longas.
+ for(let i=0;i<ids.length;i+=100){const f=await sb.from('pagamento_formas').select('pagamento_id,forma_pagamento,valor').in('pagamento_id',ids.slice(i,i+100));if(f.error)throw f.error;formas.push(...(f.data||[]))}
+ // Consulta apenas de leitura das parcelas vinculadas aos pagamentos exibidos.
+ let parcelas=[];
+ for(let i=0;i<ids.length;i+=100){
+   const pr=await sb.from('parcelas_credito').select('pagamento_id,numero_parcela,total_parcelas,valor,data_prevista,status,data_recebida').in('pagamento_id',ids.slice(i,i+100)).order('numero_parcela',{ascending:true});
+   if(pr.error)throw new Error('Não foi possível consultar as parcelas: '+pr.error.message);
+   parcelas.push(...(pr.data||[]));
+ }
+ const parcelasPorPagamento=new Map();
+ for(const pc of parcelas){
+   if(!parcelasPorPagamento.has(pc.pagamento_id))parcelasPorPagamento.set(pc.pagamento_id,[]);
+   parcelasPorPagamento.get(pc.pagamento_id).push(pc);
+ }
+ const resumoParcelas=document.getElementById('exParcelasResumo');
+ const linhasParcelas=document.getElementById('exParcelasLinhas');
+ resumoParcelas.textContent=parcelas.length?`${parcelas.length} parcela(s) vinculada(s) aos pagamentos do período. Datas previstas não significam repasse recebido.`:'Nenhum parcelamento vinculado aos pagamentos deste período.';
+ linhasParcelas.innerHTML=pagamentos.flatMap(p=>(parcelasPorPagamento.get(p.id)||[]).sort((a,b)=>a.numero_parcela-b.numero_parcela).map(pc=>`<tr><td>${esc(p.descricao||tipoBR(p.tipo))} (#${p.id})</td><td>${Number(pc.numero_parcela)}/${Number(pc.total_parcelas)}</td><td>${dataBR(pc.data_prevista)}</td><td>${money(pc.valor)}</td><td>${esc(pc.status||'—')}${pc.data_recebida?' — '+dataBR(pc.data_recebida):''}</td></tr>`)).join('')||'<tr><td colspan="5">Nenhuma parcela encontrada.</td></tr>';
+ const soma=arr=>arr.reduce((v,x)=>v+Number(x.valor_total||0),0);
+ document.getElementById('exAlunoTitulo').textContent=String(aluno.codigo)+' — '+String(aluno.nome||'');
+ document.getElementById('exTotal').textContent=money(soma(pagamentos));
+ document.getElementById('exTaxa').textContent=money(pagamentos.reduce((v,x)=>v+Number(x.taxa_matricula_valor||0),0));
+ document.getElementById('exMens').textContent=money(soma(pagamentos.filter(x=>x.tipo==='mensalidade'))-pagamentos.filter(x=>x.tipo==='mensalidade').reduce((v,x)=>v+Number(x.taxa_matricula_valor||0),0));
+ document.getElementById('exVendas').textContent=money(soma(pagamentos.filter(x=>x.tipo==='venda')));
+ document.getElementById('exAval').textContent=money(soma(pagamentos.filter(x=>x.tipo==='avaliacao')));
+ const porForma={};for(const f of formas)porForma[f.forma_pagamento]=(porForma[f.forma_pagamento]||0)+Number(f.valor||0);
+ document.getElementById('exFormas').innerHTML=Object.entries(porForma).map(([nome,v])=>`<div>${esc(formaBR(nome))}: <b>${money(v)}</b></div>`).join('')||'Nenhuma forma de pagamento registrada.';
+ document.getElementById('exLinhas').innerHTML=pagamentos.map(x=>`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${esc(x.descricao||'—')}${Number(x.taxa_matricula_valor||0)>0&&x.tipo==='mensalidade'?' + Taxa de matrícula '+money(x.taxa_matricula_valor):''}</td><td>${money(x.valor_total)}</td><td>${(formas.filter(f=>f.pagamento_id===x.id).map(f=>esc(formaBR(f.forma_pagamento))+' '+money(f.valor)).join(' + ')||(parcelasPorPagamento.has(x.id)?'Crédito parcelado ('+parcelasPorPagamento.get(x.id).length+'x)':'—'))}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum pagamento encontrado neste período.</td></tr>';
+   // Teste 30 — Etapa 2: consulta somente leitura dos check-ins no extrato individual.
+  const gymSecao=document.getElementById('exGymSecao');
+  gymSecao.classList.add('hidden');
+  let checkins=[];
+  if(ehAlunoWellHub(aluno)){
+   const cg=await sb.from('gympass_checkins').select('data_checkin,numero_checkin,valor,id').eq('aluno_codigo',codigo).gte('data_checkin',inicio).lte('data_checkin',fim).order('data_checkin',{ascending:false});
+   if(cg.error)throw new Error('Não foi possível consultar os check-ins: '+cg.error.message);
+   checkins=cg.data||[];
+   const totalGym=checkins.reduce((total,c)=>total+Number(c.valor||0),0);
+   document.getElementById('exGymResumo').textContent=`${checkins.length} check-in(s) no período de ${dataBR(inicio)} a ${dataBR(fim)} — total ${money(totalGym)}.`;
+   document.getElementById('exGymLinhas').innerHTML=checkins.map(c=>`<tr><td>${dataBR(c.data_checkin)}</td><td>${Number(c.numero_checkin)>0?Number(c.numero_checkin)+'º':'—'}</td><td>${money(c.valor)}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum check-in encontrado neste período.</td></tr>';
+   gymSecao.classList.remove('hidden');
+  }
+  document.getElementById('exPeriodoImpresso').textContent=`Período: ${dataBR(inicio)} a ${dataBR(fim)} · Valores lançados (crédito parcelado não significa repasse já recebido).`;
+ window.exUltimaConsulta={codigo,inicio,fim};
+   msg.textContent=`${pagamentos.length} lançamento(s) financeiro(s) encontrado(s) entre ${dataBR(inicio)} e ${dataBR(fim)}.${ehAlunoWellHub(aluno)?` ${checkins.length} check-in(s) GymPass / WellHub.`:""}`;resultado.classList.remove('hidden');document.getElementById('exImprimir').disabled=false;
+ }catch(e){msg.textContent='Erro ao consultar extrato: '+(e.message||e)}
+}
+function imprimirExtrato(){
+ const u=window.exUltimaConsulta;
+ if(!u||document.getElementById('exResultado').classList.contains('hidden')||u.codigo!==codigoExtratoAtual()||u.inicio!==document.getElementById('exInicio').value||u.fim!==document.getElementById('exFim').value){
+  alert('Os dados da consulta foram alterados. Clique em CONSULTAR EXTRATO novamente antes de imprimir.');return;
+ }
+ window.print();
+}
+async function marcarParcelaRecebida(id){const r=await sb.from('parcelas_credito').update({status:'Recebida',data_recebida:localDate()}).eq('id',id);if(r.error){alert('Erro ao atualizar parcela: '+r.error.message);return}gerarRelatorio()}
+
+function entrarBoasVindas(){
+ document.getElementById('boasVindas').classList.add('hidden');
+}
+// Reutiliza a logo original já incorporada ao extrato, sem arquivos externos.
+(function prepararLogoBoasVindas(){
+ const logoOriginal=document.querySelector('.ex-logo-header img');
+ const logoDestino=document.getElementById('bvLogo');
+ if(logoOriginal && logoDestino)logoDestino.src=logoOriginal.src;
+})();
+
+// Teste 24: montagem visual fiel ao Atendimento integrado; não grava no banco.
+(function(){
+ const ops=document.getElementById('operacoes');
+ const area=document.getElementById('itemArea');
+ if(!ops||!area)return;
+ const panel=document.createElement('div');panel.id='integrado24';panel.className='hidden';
+ panel.innerHTML=`<h2 style="margin-top:4px">Atendimento integrado</h2>
+ <p class="muted">Selecione o plano, os produtos e as avaliações desejados. Confira os valores antes de confirmar a gravação.</p>
+ <h3>O que o aluno está pagando?</h3>
+ <div class="int-choices"><label id="int24PlanoChoice"><input type="checkbox" id="int24Plano" onchange="int24Toggle()">Plano</label><label><input type="checkbox" id="int24Vendas" onchange="int24Toggle()">Vendas</label><label><input type="checkbox" id="int24Avaliacoes" onchange="int24Toggle()">Avaliações</label></div>
+ <div id="int24PlanoArea" class="int-section hidden"><label>Plano</label><select id="int24PlanoSelect" onchange="int24Refresh()"></select><div id="int24Personal" class="hidden" style="margin-top:10px"><label>Valor total acordado do plano Personal Trainer (R$)</label><input type="number" id="int24PersonalValor" min="0.01" step="0.01" oninput="int24Refresh()"></div><label style="margin-top:12px;font-size:14px"><input type="checkbox" id="int24Taxa" style="width:auto;margin-right:8px" onchange="int24TaxaAlterada()">Cobrar taxa de matrícula — R$ 20,00</label><div id="int24TaxaOpcao" class="muted hidden" style="margin-top:8px"></div><div class="result">Valor total: <b id="int24PlanoValor"></b></div><h3>Forma de pagamento</h3><div id="int24PlanoPay"></div><button type="button" class="secondary" onclick="int24AddPay('plano')">+ Outra forma de pagamento</button></div>
+ <div id="int24VendasArea" class="int-section hidden"><div id="int24VendaItens"></div><button type="button" class="secondary" onclick="int24AddItem('venda')">+ Adicionar outro produto</button></div>
+ <div id="int24AvaliacoesArea" class="int-section hidden"><div id="int24AvaliacaoItens"></div><button type="button" class="secondary" onclick="int24AddItem('avaliacao')">+ Adicionar outra avaliação</button></div>
+ <div id="int24TaxaModal" style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99999;display:none;align-items:center;justify-content:center;padding:16px"><div style="background:#fff;color:#1b2935;border-radius:12px;padding:24px;max-width:460px;width:100%;box-shadow:0 12px 40px #0005"><h3>Como deseja cobrar a taxa de matrícula?</h3><p>Escolha como receber os R$ 20,00.</p><label style="display:block;padding:12px;border:1px solid #ccc;border-radius:8px;margin:8px 0"><input type="radio" name="int24ModoTaxa" value="vista" checked style="width:auto;margin-right:8px" onchange="int24TaxaRadio()">À vista, separadamente</label><label style="display:block;padding:12px;border:1px solid #ccc;border-radius:8px;margin:8px 0"><input type="radio" name="int24ModoTaxa" value="junto" style="width:auto;margin-right:8px" onchange="int24TaxaRadio()">Parcelar junto com o plano</label><div id="int24TaxaVista"><label>Forma de pagamento da matrícula</label><select id="int24TaxaForma"><option>Dinheiro</option><option>PIX (Academia)</option><option>PIX (Eliane)</option><option>PIX (Stéfano)</option><option>Débito</option><option>Crédito</option><option>Outra</option></select></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button type="button" class="secondary" onclick="int24TaxaCancelar()">Cancelar</button><button type="button" class="primary" onclick="int24TaxaAplicar()">Continuar</button></div></div></div>
+ <div id="int24Resumo" class="result hidden"></div><p class="muted" style="margin-top:12px">Confira os detalhes antes de registrar. A gravação só será liberada após a validação do contrato de dados do Supabase.</p>
+ <button type="button" class="primary" onclick="int24Conferir()">CONFERIR PAGAMENTO</button> <button type="button" class="secondary" onclick="int29CancelarAtendimento()">CANCELAR ATENDIMENTO</button><div id="int24Conferencia" class="status hidden"></div>`;
+ area.parentNode.insertBefore(panel,area);
+ // Etapa 9: somente navegação visual. As rotinas financeiras e de check-in permanecem originais.
+ const oldHeading=ops.querySelector('h3');if(oldHeading)oldHeading.textContent='O que o aluno deseja fazer?';
+ const botoes=ops.querySelectorAll('button');
+ botoes.forEach(b=>b.classList.remove('hidden'));
+ // A própria busca controla a visibilidade dos botões Mensalidade/GymPass por categoria.
+ const gymBox=document.getElementById('gymArea');
+ ops.parentNode.insertBefore(gymBox,panel);
+ const mo=new MutationObserver(()=>{
+  if(ops.classList.contains('hidden')){
+   panel.classList.add('hidden');
+   gymBox.classList.add('hidden');
+  }
+ });
+ mo.observe(ops,{attributes:true,attributeFilter:['class']});
+ const originalBuscar=window.buscarAtendimento;
+ window.buscarAtendimento=function(){
+  const anterior=String(alunoAtendimento?.codigo||'');
+  originalBuscar.apply(this,arguments);
+  const atual=String(alunoAtendimento?.codigo||'');
+  if(anterior!==atual || !alunoAtendimento){
+   // Novo aluno ou pesquisa limpa: descarta os itens do atendimento anterior.
+   window.int29CancelarAtendimento(false);
+   panel.classList.add('hidden');
+   gymBox.classList.add('hidden');
+   for(const id of ['int24Plano','int24Vendas','int24Avaliacoes'])document.getElementById(id).checked=false;
+  }
+  document.getElementById('int24PlanoChoice').classList.toggle('hidden',!!alunoAtendimento&&ehAlunoWellHub(alunoAtendimento));
+ };
+ window.int29Abrir=async function(tipo){
+  if(!alunoAtendimento)return;
+  const gym=ehAlunoWellHub(alunoAtendimento);
+  if(tipo==='gympass'){
+   if(!gym)return;
+   panel.classList.add('hidden');
+   await tipoAtendimento('gympass');
+   if(!gymBox.classList.contains('hidden'))gymBox.scrollIntoView({behavior:'smooth',block:'nearest'});
+   return;
+  }
+  if(tipo==='mensalidade'&&gym)return;
+  gymBox.classList.add('hidden');window.gymTemp=null;
+  document.getElementById('itemArea').classList.add('hidden');
+  document.getElementById('payArea').classList.add('hidden');
+  document.getElementById('vendaPrazoArea').classList.add('hidden');
+  document.getElementById('pMsg').textContent='';
+  const alvo=tipo==='mensalidade'?'int24Plano':tipo==='venda'?'int24Vendas':'int24Avaliacoes';
+  for(const id of ['int24Plano','int24Vendas','int24Avaliacoes'])document.getElementById(id).checked=id===alvo;
+  document.getElementById('int24PlanoChoice').classList.toggle('hidden',gym);
+  panel.classList.remove('hidden');
+  int24Toggle();
+ };
+ window.int29CancelarAtendimento=function(limparAluno=true){
+  if(int28Busy)return;
+  // Cancela o preenchimento atual e limpa a seleção do aluno, sem gravar nada.
+  int28Pending=null;
+  const conf=document.getElementById('int24Conferencia');
+  conf.classList.add('hidden');conf.replaceChildren();
+  int24State.venda=[];int24State.avaliacao=[];
+  int24State.plano=[{pays:[{f:'',v:0,n:1}],lastTotal:null}];
+  int24TaxaModo=null;document.getElementById('int24TaxaModal').style.display='none';
+  for(const id of ['int24Plano','int24Vendas','int24Avaliacoes','int24Taxa'])document.getElementById(id).checked=false;
+  document.getElementById('int24PersonalValor').value='';
+  // Novo atendimento: não reutilizar o plano escolhido na operação anterior.
+  document.getElementById('int24PlanoSelect').value='';
+  document.getElementById('int24VendaItens').replaceChildren();
+  document.getElementById('int24AvaliacaoItens').replaceChildren();
+  panel.classList.add('hidden');
+  document.getElementById('itemArea').classList.add('hidden');
+  document.getElementById('payArea').classList.add('hidden');
+  document.getElementById('vendaPrazoArea').classList.add('hidden');
+  document.getElementById('pMsg').textContent='';
+  int24Toggle();
+  if(limparAluno)liberarPesquisaAtendimento();
+ };
+ // Ao sair de Manutenção, descarta apenas o rascunho da tela, sem gravar dados.
+ const int32AbaOriginal=window.aba;
+ window.aba=function(id,btn){
+  if(document.getElementById('pagamento').classList.contains('active') && id!=='pagamento'){
+   window.int29CancelarAtendimento();
+  }
+  return int32AbaOriginal.apply(this,arguments);
+ };
+ window.int24State={venda:[],avaliacao:[],plano:[{pays:[{f:'',v:0,n:1}],lastTotal:null}]};
+ let int24TaxaModo=null;
+ const int24TaxaParcelado=()=>int24State.plano[0].pays.some(p=>p.f==='Crédito parcelado');
+ window.int24TaxaRadio=function(){document.getElementById('int24TaxaVista').classList.toggle('hidden',document.querySelector('input[name="int24ModoTaxa"]:checked')?.value!=='vista')};
+ window.int24TaxaCancelar=function(){document.getElementById('int24TaxaModal').style.display='none';document.getElementById('int24Taxa').checked=false;int24TaxaModo=null;int24Refresh()};
+ window.int24TaxaAplicar=function(){int24TaxaModo=document.querySelector('input[name="int24ModoTaxa"]:checked')?.value||'vista';document.getElementById('int24TaxaModal').style.display='none';int24Refresh()};
+ window.int24TaxaAlterada=function(){int24TaxaModo=null;int24Refresh()};
+ window.int24TaxaReabrir=function(){int24TaxaModo=null;int24Refresh()};
+ function int24TaxaUi(){
+  const taxa=document.getElementById('int24Taxa').checked;
+  const parc=int24TaxaParcelado();
+  const box=document.getElementById('int24TaxaOpcao');
+  box.classList.toggle('hidden',!taxa||!parc||!int24TaxaModo);
+  if(taxa&&parc&&int24TaxaModo)box.innerHTML='Taxa de matrícula: '+(int24TaxaModo==='junto'?'parcelada junto com o plano':'à vista — '+esc(document.getElementById('int24TaxaForma').value))+' <button type="button" class="secondary" onclick="int24TaxaReabrir()">Alterar</button>';
+  if(taxa&&parc&&!int24TaxaModo){document.getElementById('int24TaxaModal').style.display='flex';}
+  if(!taxa||!parc){document.getElementById('int24TaxaModal').style.display='none';int24TaxaModo=null;}
+ }
+
+ // Atualiza o valor do Personal após a ficha do aluno ser exibida, evitando preço temporário do plano geral.
+ new MutationObserver(()=>{if(alunoAtendimento && !document.getElementById('integrado24').classList.contains('hidden'))int24Refresh();}).observe(document.getElementById('pAluno'),{childList:true,subtree:true});
+ window.int24Toggle=function(){
+  for(const [check,box] of [['int24Plano','int24PlanoArea'],['int24Vendas','int24VendasArea'],['int24Avaliacoes','int24AvaliacoesArea']])document.getElementById(box).classList.toggle('hidden',!document.getElementById(check).checked);
+  const sel=document.getElementById('int24PlanoSelect');const prev=sel.value;
+  sel.innerHTML='<option value="">Selecione</option>'+planos.filter(x=>x.ativo&&!/taxa de matr[ií]cula/i.test(x.nome)).map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('');if([...sel.options].some(x=>x.value===prev))sel.value=prev;
+  if(document.getElementById('int24Vendas').checked&&!int24State.venda.length)int24AddItem('venda');
+  if(document.getElementById('int24Avaliacoes').checked&&!int24State.avaliacao.length)int24AddItem('avaliacao');
+  int24Refresh();
+ };
+ window.int24AddItem=function(tipo){int24State[tipo].push({id:'',qtd:1,modo:'agora',venc:'',pays:[{f:'',v:0,n:1}],lastTotal:null});int24RenderItems(tipo)};
+ window.int24RemoveItem=function(tipo,i){int24State[tipo].splice(i,1);int24RenderItems(tipo)};
+ window.int24AddPay=function(tipo,i=0){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.push({f:'',v:0,n:1});int24Refresh()};
+ window.int24PayChange=function(tipo,i,j,field,value){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays[j][field]=field==='v'||field==='n'?Number(value):value;if(tipo==='plano'&&field==='f')int24TaxaModo=null;int24Refresh(field!=='v'&&field!=='n');if(field==='v'||field==='n'){const el=document.getElementById('int24parcelas-'+tipo+'-'+i);if(el)el.innerHTML=int24Installments(item)}};
+ window.int24PayRemove=function(tipo,i,j){let item=tipo==='plano'?int24State.plano[0]:int24State[tipo][i];item.pays.splice(j,1);if(!item.pays.length)item.pays.push({f:'',v:0,n:1});int24Refresh()};
+ const opts=()=>methods.map(x=>`<option>${esc(x)}</option>`).join('');
+ function int24SyncAmount(item,total){
+  total=Math.round((Number(total)||0)*100)/100;
+  if(item.lastTotal===total)return;
+  const old=Number(item.lastTotal);
+  if(item.pays.length===1 || item.lastTotal===null || !Number.isFinite(old)){
+   if(item.pays.length===1)item.pays[0].v=total;
+  }else{
+   const delta=Math.round((total-old)*100)/100;
+   item.pays[0].v=Math.max(0,Math.round((Number(item.pays[0].v||0)+delta)*100)/100);
+  }
+  item.lastTotal=total;
+ }
+ function int24Installments(item){
+  const parcelados=item.pays.filter(p=>p.f==='Crédito parcelado');
+  if(!parcelados.length)return '';
+  return '<div class="status" style="margin-top:10px"><b>Resumo das parcelas</b>'+parcelados.map(p=>{
+   const n=Math.max(1,Math.floor(Number(p.n)||1)),cents=Math.round((Number(p.v)||0)*100),base=Math.floor(cents/n),rest=cents-base*n;
+   return '<div style="margin-top:6px">'+n+'x no crédito parcelado — '+money(cents/100)+'</div>'+Array.from({length:n},(_,k)=>'<div class="muted">'+(k+1)+'ª parcela: '+money((base+(k<rest?1:0))/100)+'</div>').join('');
+  }).join('')+'</div>';
+ }
+ function payHtml(tipo,i,item){return item.pays.map((p,j)=>`<div class="int-payrow"><select onchange="int24PayChange('${tipo}',${i},${j},'f',this.value)"><option value="" ${!p.f?'selected':''}>Selecione</option>${methods.map(x=>`<option ${p.f===x?'selected':''}>${esc(x)}</option>`).join('')}</select><input type="number" min="0" step="0.01" value="${p.v}" oninput="int24PayChange('${tipo}',${i},${j},'v',this.value)">${p.f==='Crédito parcelado'?`<input type="number" min="1" step="1" value="${p.n}" title="Número de parcelas" aria-label="Número de parcelas" oninput="int24PayChange('${tipo}',${i},${j},'n',this.value)">`:''}<button type="button" class="danger" onclick="int24PayRemove('${tipo}',${i},${j})">X</button></div>`).join('')+`<div id="int24parcelas-${tipo}-${i}">${int24Installments(item)}</div>`}
+
+ window.int24RenderItems=function(tipo){
+  const list=document.getElementById(tipo==='venda'?'int24VendaItens':'int24AvaliacaoItens');
+  const source=(tipo==='venda'?produtos:tiposAv).filter(x=>x.ativo);
+  list.innerHTML=int24State[tipo].map((item,i)=>`<div class="int-entry"><label>${tipo==='venda'?'Produto':'Avaliação'}</label><select onchange="int24ItemChange('${tipo}',${i},'id',this.value)"><option value="" ${!item.id?'selected':''}>Selecione</option>${source.map(x=>`<option value="${x.id}" ${String(item.id)===String(x.id)?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${tipo==='venda'?`<div style="margin-top:10px"><label>Quantidade</label><input type="number" min="1" step="1" value="${item.qtd}" oninput="int24ItemChange('${tipo}',${i},'qtd',this.value)"></div>`:''}<div class="result">Valor total: <b id="int24val-${tipo}-${i}"></b>${tipo==='venda'?`<div id="int24estoque-${i}" class="muted" style="margin-top:5px"></div>`:''}</div><div style="margin-top:12px"><label>Recebimento</label><select onchange="int24ItemChange('${tipo}',${i},'modo',this.value)"><option value="agora" ${item.modo==='agora'?'selected':''}>Pagar agora</option><option value="depois" ${item.modo==='depois'?'selected':''}>Pagar depois</option></select></div><div id="int24venc-${tipo}-${i}" class="${item.modo==='depois'?'':'hidden'}" style="margin-top:10px"><label>Data combinada para pagamento</label><input type="date" value="${item.venc}" onchange="int24ItemChange('${tipo}',${i},'venc',this.value)"></div><div id="int24pay-${tipo}-${i}" class="int-pays ${item.modo==='depois'?'hidden':''}"><h3>Forma de pagamento</h3><div id="int24pays-${tipo}-${i}"></div><button type="button" class="secondary" onclick="int24AddPay('${tipo}',${i})">+ Outra forma de pagamento</button></div><div class="int-actions"><button type="button" class="secondary" onclick="int24RemoveItem('${tipo}',${i})">REMOVER ${tipo==='venda'?'PRODUTO':'AVALIAÇÃO'}</button></div></div>`).join('');
+  int24State[tipo].forEach(item=>{if(item.id&&!source.some(x=>String(x.id)===String(item.id)))item.id=''});int24Refresh();
+ };
+ window.int24ItemChange=function(tipo,i,k,v){const item=int24State[tipo][i];item[k]=k==='qtd'?Number(v):v;if(k==='modo')int24RenderItems(tipo);else int24Refresh()};
+ function itemValue(tipo,item){const src=tipo==='venda'?produtos:tiposAv;const x=src.find(x=>String(x.id)===String(item.id));return Number(x?.valor||0)*(tipo==='venda'?Math.max(1,Number(item.qtd)||1):1)}
+ window.int24Refresh=function(rebuild=true){
+  const p=planos.find(x=>String(x.id)===document.getElementById('int24PlanoSelect').value);
+  const isPersonal=alunoAtendimento?.categoria_aluno==='Personal Trainer'&&/trimestral|semestral|anual/i.test(p?.nome||'');
+  document.getElementById('int24Personal').classList.toggle('hidden',!isPersonal);
+  const pv=isPersonal?Number(document.getElementById('int24PersonalValor').value||0):alunoAtendimento?.categoria_aluno==='Personal Trainer'&&/^mensal(?:idade)?$/i.test(p?.nome||'')&&Number(alunoAtendimento.valor_personal_mensal)>0?Number(alunoAtendimento.valor_personal_mensal):Number(p?.valor||0);
+  int24TaxaUi();
+  const totalPlano=pv+(document.getElementById('int24Taxa').checked&&(!int24TaxaParcelado()||int24TaxaModo==='junto')?20:0);
+  document.getElementById('int24PlanoValor').textContent=money(pv+(document.getElementById('int24Taxa').checked?20:0));
+  int24SyncAmount(int24State.plano[0],totalPlano);
+  if(rebuild)document.getElementById('int24PlanoPay').innerHTML=payHtml('plano',0,int24State.plano[0]);
+  let now=document.getElementById('int24Plano').checked?totalPlano+(document.getElementById('int24Taxa').checked&&int24TaxaParcelado()&&int24TaxaModo==='vista'?20:0):0, later=0;
+  for(const tipo of ['venda','avaliacao'])int24State[tipo].forEach((item,i)=>{
+   const value=itemValue(tipo,item);int24SyncAmount(item,value);const b=document.getElementById(`int24val-${tipo}-${i}`);if(b)b.textContent=money(value);
+   if(tipo==='venda'){
+    const info=document.getElementById(`int24estoque-${i}`);
+    if(info){const produto=produtos.find(x=>String(x.id)===String(item.id));
+      info.textContent=produto?(produto.estoque==null?'Estoque disponível: não informado':'Estoque disponível: '+Number(produto.estoque)+' unidade(s)'):'';
+    }
+   }
+   if(rebuild){const pay=document.getElementById(`int24pays-${tipo}-${i}`);if(pay)pay.innerHTML=payHtml(tipo,i,item)}
+   if(document.getElementById(tipo==='venda'?'int24Vendas':'int24Avaliacoes').checked){if(item.modo==='agora')now+=value;else later+=value}
+  });
+  const resumo=document.getElementById('int24Resumo');resumo.classList.toggle('hidden',!(now||later));resumo.innerHTML=`<b>Resumo do atendimento</b><div>Pagar agora: ${money(now)}</div><div>Pagar depois: ${money(later)}</div><div>Total: <b>${money(now+later)}</b></div>`;
+ };
+ // Teste 28, etapa 2: confirmação transacional via RPC V17.
+ let int28Pending=null,int28Busy=false;
+ const int28Cents=v=>Math.round(Number(v)*100);
+ const int28Round=v=>Math.round(v*100)/100;
+ const int28Formas=ps=>ps.map(p=>({forma:p.f,valor:int28Round(Number(p.v))}));
+ function int28DividirTaxa(formas,taxa){
+  let resto=int28Cents(taxa),plano=[],matricula=[];
+  for(const f of formas){const cent=int28Cents(f.valor),ret=Math.min(cent,resto);if(ret>0)matricula.push({forma:f.forma,valor:ret/100});if(cent-ret>0)plano.push({forma:f.forma,valor:(cent-ret)/100});resto-=ret;}
+  if(resto!==0)throw Error('As formas de pagamento não cobrem a taxa de matrícula.');
+  return {plano,matricula};
+ }
+ function int28Pagamentos(ps,valor,label){
+  if(!ps.length||ps.some(p=>!p.f||!Number.isFinite(Number(p.v))||Number(p.v)<=0||int28Cents(p.v)!==Number(p.v)*100&&Math.abs(int28Cents(p.v)-Number(p.v)*100)>.001))throw Error(label+': informe formas com valores positivos e duas casas decimais.');
+  if(ps.reduce((n,p)=>n+int28Cents(p.v),0)!==int28Cents(valor))throw Error(label+': a soma das formas não corresponde ao valor.');
+  return int28Formas(ps);
+ }
+ function int28UUID(){
+  if(!globalThis.crypto||typeof crypto.randomUUID!=='function')throw Error('Este navegador não disponibiliza identificador seguro. Abra o sistema por HTTPS.');
+  return crypto.randomUUID();
+ }
+ function int28Payload(){
+  if(!alunoAtendimento?.codigo)throw Error('Selecione um aluno.');
+  const data=document.getElementById('pData').value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data||''))throw Error('Informe a data do atendimento.');
+  const enabled={plano:document.getElementById('int24Plano').checked,venda:document.getElementById('int24Vendas').checked,avaliacao:document.getElementById('int24Avaliacoes').checked};
+  if(!Object.values(enabled).some(Boolean))throw Error('Selecione Plano, Vendas ou Avaliações.');
+  const payload={aluno_codigo:String(alunoAtendimento.codigo),data_atendimento:data,total:0,plano:null,taxa_matricula:null,parcelamento:null,itens:[]};
+  const lines=[];let totalC=0;
+  if(enabled.plano){
+   if(ehAlunoWellHub(alunoAtendimento))throw Error('Aluno WellHub não pode receber mensalidade.');
+   const p=planos.find(x=>String(x.id)===document.getElementById('int24PlanoSelect').value);
+   if(!p||!p.ativo)throw Error('Selecione um plano ativo.');
+   const personal=alunoAtendimento.categoria_aluno==='Personal Trainer';
+   const especial=personal&&/trimestral|semestral|anual/i.test(p.nome);
+   const valor=especial?Number(document.getElementById('int24PersonalValor').value):personal&&/^mensal(?:idade)?$/i.test(p.nome)&&Number(alunoAtendimento.valor_personal_mensal)>0?Number(alunoAtendimento.valor_personal_mensal):Number(p.valor);
+   if(!Number.isFinite(valor)||valor<=0||int28Cents(valor)!==Math.round(valor*100))throw Error('Valor do plano inválido.');
+   const taxa=document.getElementById('int24Taxa').checked?20:0;
+   if(taxa&&(alunoAtendimento.taxa_matricula_paga||['Já paga','Isento'].includes(alunoAtendimento.taxa_matricula_status)))throw Error('A taxa de matrícula já foi paga ou o aluno está isento.');
+   const ps=int24State.plano[0].pays;
+   if(taxa&&ps.some(x=>x.f==='Crédito parcelado')&&!int24TaxaModo)throw Error('Escolha como cobrar a taxa de matrícula.');
+   const junto=!!(taxa&&ps.some(x=>x.f==='Crédito parcelado')&&int24TaxaModo==='junto');
+   const formas=int28Pagamentos(ps,valor+(junto?taxa:taxa&&!ps.some(x=>x.f==='Crédito parcelado')?taxa:0),'Plano');
+   const parcel=ps.filter(x=>x.f==='Crédito parcelado');
+   if(parcel.length&&(parcel.length!==1||ps.length!==1))throw Error('Crédito parcelado deve ser a única forma do plano. Volte e edite as formas.');
+   const anterior=String(alunoAtendimento.vencimento_plano||'').slice(0,10);
+   let base=anterior||data,retorno=false;
+   if(anterior&&data>anterior){
+    const opc=prompt('Vencimento anterior: '+dataBR(anterior)+'\nPagamento: '+dataBR(data)+'\nPlano: '+p.nome+'\n\n1 — Manter a mesma data de vencimento → '+dataBR(planDueDate(p.nome,anterior))+'\n2 — Renovar a partir do pagamento → '+dataBR(planDueDate(p.nome,data))+'\n3 — Registrar RETORNO (com histórico) → '+dataBR(planDueDate(p.nome,data))+'*\n\n*Na opção 3, você poderá informar a data efetiva do retorno.','2');
+    if(opc===null||opc==='0')throw Error('Conferência cancelada.');
+    if(!['1','2','3'].includes(opc))throw Error('Opção de vencimento inválida.');
+    base=opc==='1'?anterior:data;retorno=opc==='3';
+    if(retorno){
+     const informado=prompt('Data efetiva do retorno (DD/MM/AAAA):',dataBR(data));
+     if(informado===null)throw Error('Conferência cancelada.');
+     const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(informado.trim());
+     if(!m)throw Error('Informe a data do retorno em DD/MM/AAAA.');
+     const iso=m[3]+'-'+m[2]+'-'+m[1];
+     if(new Date(iso+'T12:00:00').toISOString().slice(0,10)!==iso)throw Error('Data de retorno inválida.');
+     base=iso;
+     alert('Retorno: '+dataBR(base)+'\nNovo vencimento: '+dataBR(planDueDate(p.nome,base)));
+    }
+   }
+   const venc=planDueDate(p.nome,base);
+   const split=taxa?(junto||!parcel.length?int28DividirTaxa(formas,taxa):{plano:formas,matricula:[{forma:document.getElementById('int24TaxaForma').value,valor:20}]}):{plano:formas,matricula:[]};
+   payload.plano={nome:p.nome,valor:int28Round(valor),vencimento_novo:venc,formas:split.plano,registrar_retorno:retorno,...(retorno?{data_retorno:base}:{})};
+   if(taxa)payload.taxa_matricula={valor:20,formas:split.matricula,parcelada_junto:junto};
+   if(parcel.length){
+    const n=Number(parcel[0].n);
+    if(!Number.isInteger(n)||n<2||n>24)throw Error('O parcelamento do plano exige de 2 a 24 parcelas.');
+    const cent=int28Cents(valor+(junto?taxa:0)),baseParc=Math.floor(cent/n),resto=cent-baseParc*n;
+    payload.parcelamento={parcelas:Array.from({length:n},(_,i)=>({numero:i+1,valor:(baseParc+(i<resto?1:0))/100,data_prevista:addMonthsISO(data,i+1)}))};
+   }
+   totalC+=int28Cents(valor+taxa);
+   lines.push('<div><b>Plano:</b> '+esc(p.nome)+' — '+money(valor)+'</div>');
+   if(taxa)lines.push('<div><b>Taxa de matrícula:</b> '+money(20)+(parcel.length?(junto?' — parcelada junto com o plano':' — à vista, '+esc(document.getElementById('int24TaxaForma').value)):'')+'</div>');
+   lines.push('<div><b>Próximo vencimento:</b> '+esc(dataBR(venc))+(retorno?' (retorno)':'')+'</div>');
+   lines.push('<div class="muted">Pagamento: '+ps.map(x=>esc(x.f)+' '+money(x.v)+(x.f==='Crédito parcelado'?' ('+x.n+'x)':'')).join(' + ')+'</div>');
+   if(payload.parcelamento)lines.push('<div class="muted">Parcelas previstas: '+payload.parcelamento.parcelas.map(x=>x.numero+'ª '+money(x.valor)+' em '+dataBR(x.data_prevista)).join(' | ')+'</div>');
+  }
+  const estoque={};
+  for(const tipo of ['venda','avaliacao'])if(enabled[tipo]){
+   if(!int24State[tipo].length)throw Error('Adicione pelo menos uma '+(tipo==='venda'?'venda':'avaliação')+'.');
+   for(const [i,item] of int24State[tipo].entries()){
+    const x=(tipo==='venda'?produtos:tiposAv).find(x=>String(x.id)===String(item.id));
+    if(!x||!x.ativo)throw Error('Item '+(i+1)+' indisponível.');
+    const qtd=tipo==='venda'?Number(item.qtd):1;
+    if(!Number.isInteger(qtd)||qtd<1)throw Error('Quantidade inválida: '+x.nome);
+    const valor=int28Round(Number(x.valor)*qtd);
+    if(!Number.isFinite(valor)||valor<=0)throw Error('Valor inválido: '+x.nome);
+    if(tipo==='venda'){estoque[x.id]=(estoque[x.id]||0)+qtd;if(estoque[x.id]>Number(x.estoque||0))throw Error('Estoque insuficiente para '+x.nome+'.');}
+    if(!['agora','depois'].includes(item.modo))throw Error('Recebimento inválido.');
+    if(item.modo==='depois'&&(!item.venc||item.venc<data))throw Error('Informe vencimento válido para '+x.nome+'.');
+    const formas=item.modo==='agora'?int28Pagamentos(item.pays,valor,x.nome):[];
+    if(formas.some(f=>f.forma==='Crédito parcelado'))throw Error('Crédito parcelado em vendas e avaliações não é aceito nesta gravação.');
+    payload.itens.push({tipo,cadastro_id:Number(x.id),quantidade:qtd,valor_total:valor,recebimento:item.modo,vencimento:item.modo==='depois'?item.venc:null,formas});
+    totalC+=int28Cents(valor);
+    lines.push('<div><b>'+(tipo==='venda'?'Venda':'Avaliação')+':</b> '+esc(x.nome)+(tipo==='venda'?' x'+qtd:'')+' — '+money(valor)+'</div>');
+    lines.push('<div class="muted">'+(item.modo==='depois'?'Pagar depois — '+dataBR(item.venc):'Pagar agora — '+formas.map(f=>esc(f.forma)+' '+money(f.valor)).join(' + '))+'</div>');
+   }
+  }
+  payload.total=totalC/100;
+  return {payload,lines};
+ }
+ window.int24Conferir=async function(){
+  if(int28Busy)return;
+  int28Pending=null;
+  const box=document.getElementById('int24Conferencia');box.classList.remove('hidden');
+  let data;
+  try{data=int28Payload();}catch(e){box.innerHTML='<div class="error">'+esc(e.message)+'</div><button type="button" class="secondary" onclick="int28Voltar()">VOLTAR E EDITAR</button>';return;}
+  int28Busy=true;
+  box.innerHTML='<h3>Conferência de Pagamento</h3><p><b>Aluno:</b> '+esc(alunoAtendimento.nome)+' ('+esc(alunoAtendimento.codigo)+')</p><p><b>Data:</b> '+dataBR(data.payload.data_atendimento)+'</p>'+data.lines.join('')+'<p><b>Total: '+money(data.payload.total)+'</b></p><p id="int28Status">Validando no Supabase, sem gravar...</p>';
+  try{
+   const result=await sb.rpc('vitturi_confirmar_atendimento_v17',{p_atendimento:data.payload,p_chave:int28UUID(),p_simular:true});
+   if(result.error)throw result.error;
+   if(!result.data?.ok||result.data?.modo!=='SIMULACAO_V17')throw Error('O Supabase não confirmou a simulação V17.');
+   const chave=int28UUID();int28Pending={...data,chave,aluno:data.payload.aluno_codigo};
+   document.getElementById('int28Status').textContent='Validação concluída no Supabase. Nenhum pagamento foi gravado ainda.';
+   box.insertAdjacentHTML('beforeend','<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" class="secondary" onclick="int28Voltar()">VOLTAR E EDITAR</button><button type="button" id="int28Confirmar" class="primary" onclick="int28Confirmar()">'+(data.payload.itens.length===1 && data.payload.itens[0].tipo==='venda' && data.payload.itens[0].recebimento==='depois' && !data.payload.mensalidade ? 'CONFIRMAR VENDA PENDENTE' : 'CONFIRMAR PAGAMENTO')+'</button></div>');
+  }catch(e){document.getElementById('int28Status').textContent='Não foi possível validar: '+(e.message||e);box.insertAdjacentHTML('beforeend','<button type="button" class="secondary" onclick="int28Voltar()">VOLTAR E EDITAR</button>');}
+  finally{int28Busy=false;}
+ };
+ window.int28NovoAtendimento=function(){
+  if(int28Busy)return;
+  int28Pending=null;
+  document.getElementById('int24Conferencia').classList.add('hidden');
+  document.getElementById('int24Conferencia').replaceChildren();
+  int24State.venda=[];int24State.avaliacao=[];
+  int24State.plano=[{pays:[{f:'Dinheiro',v:0,n:1}],lastTotal:null}];
+  int24TaxaModo=null;document.getElementById('int24TaxaModal').style.display='none';
+  for(const id of ['int24Plano','int24Vendas','int24Avaliacoes','int24Taxa'])document.getElementById(id).checked=false;
+  document.getElementById('int24PersonalValor').value='';
+  // Novo atendimento: não reutilizar o plano escolhido na operação anterior.
+  document.getElementById('int24PlanoSelect').value='';
+  document.getElementById('int24VendaItens').replaceChildren();
+  document.getElementById('int24AvaliacaoItens').replaceChildren();
+  liberarPesquisaAtendimento();
+  limparFormularioAtendimento();
+  document.getElementById('integrado24').classList.add('hidden');
+  int24Toggle();
+  document.getElementById('pCodigo').focus();
+ };
+ window.int28Voltar=function(){if(int28Busy)return;int28Pending=null;document.getElementById('int24Conferencia').classList.add('hidden');};
+ // Qualquer alteração posterior à simulação exige nova conferência.
+ document.getElementById('integrado24').addEventListener('input',()=>{if(int28Pending&&!int28Busy){int28Pending=null;const btn=document.getElementById('int28Confirmar');if(btn)btn.disabled=true;const status=document.getElementById('int28Status');if(status)status.textContent='Dados alterados. Clique novamente em CONFERIR PAGAMENTO.';}});
+ document.getElementById('integrado24').addEventListener('change',()=>{if(int28Pending&&!int28Busy){int28Pending=null;const btn=document.getElementById('int28Confirmar');if(btn)btn.disabled=true;const status=document.getElementById('int28Status');if(status)status.textContent='Dados alterados. Clique novamente em CONFERIR PAGAMENTO.';}});
+ document.getElementById('pData').addEventListener('change',()=>{if(int28Pending&&!int28Busy){int28Pending=null;const btn=document.getElementById('int28Confirmar');if(btn)btn.disabled=true;}});
+ window.int28Confirmar=async function(){
+  if(int28Busy||!int28Pending)return;
+  const pending=int28Pending;
+  if(String(alunoAtendimento?.codigo)!==pending.aluno){alert('Aluno alterado. Confira novamente.');int28Voltar();return;}
+  if(!confirm('CONFIRMAR a gravação real de '+money(pending.payload.total)+' para '+alunoAtendimento.nome+'?'))return;
+  int28Busy=true;const btn=document.getElementById('int28Confirmar');btn.disabled=true;
+  const status=document.getElementById('int28Status');status.textContent='Gravando atendimento no Supabase. Não feche esta página.';
+  try{
+   const r=await sb.rpc('vitturi_confirmar_atendimento_v17',{p_atendimento:pending.payload,p_chave:pending.chave,p_simular:false});
+   if(r.error)throw r.error;
+   if(!r.data?.ok||!['GRAVADO','JA_REGISTRADO'].includes(r.data?.modo))throw Error('Resposta inesperada do Supabase. Confira os lançamentos antes de tentar novamente.');
+   status.textContent=r.data.modo==='JA_REGISTRADO'?'Atendimento já registrado anteriormente. Nenhuma duplicação realizada.':'Atendimento registrado com sucesso!';
+   status.className='ok';int28Pending=null;btn.remove();
+   // Após sucesso, não permitir voltar à edição de um atendimento já gravado.
+   const box=document.getElementById('int24Conferencia');
+   box.querySelectorAll('button').forEach(b=>b.remove());
+   const fechar=document.createElement('button');fechar.type='button';fechar.className='primary';
+   fechar.textContent='FECHAR / NOVO ATENDIMENTO';fechar.onclick=()=>int28NovoAtendimento();
+   const acoesFinais=document.createElement('div');acoesFinais.style.cssText='display:flex;justify-content:center;margin-top:14px';acoesFinais.appendChild(fechar);box.appendChild(acoesFinais);
+   try{await loadAll();}catch(e){console.warn('Atendimento gravado; atualização de tela pendente:',e);}
+  }catch(e){status.className='error';status.textContent='Não foi possível confirmar o resultado: '+(e.message||e)+'. Se houve falha de conexão, confira os lançamentos antes de tentar novamente.';btn.disabled=false;}
+  finally{int28Busy=false;}
+ };
+
+
+})();
+
+initSupabase();
+</script>
+<script>
+/* Etapa 31 — Renda Extra. Isolada das tabelas de pagamentos existentes. */
+let reFontes=[],reRecebimentos=[];
+const reEl=id=>document.getElementById(id);
+const reMsg=(id,t)=>{reEl(id).textContent=t};
+const reSafe=t=>esc(String(t??''));
+async function reCarregar(){
+ if(!sb)return;
+ if(!reEl('reData').value)reEl('reData').value=localDate();
+ if(!reEl('reMes').value)reEl('reMes').value=localDate().slice(0,7);
+ const [f,r]=await Promise.all([sb.from('rendas_extras').select('id,nome,ativa').order('nome'),sb.from('renda_extra_recebimentos').select('id,renda_id,descricao,data_recebimento,valor,formas_recebimento').gte('data_recebimento',reEl('reMes').value+'-01').lt('data_recebimento',addMonthsISO(reEl('reMes').value+'-01',1)).order('data_recebimento',{ascending:false})]);
+ if(f.error||r.error){reMsg('reCadastroMsg','Para ativar Renda Extra, execute primeiro o SQL da Etapa 31 no Supabase. '+(f.error||r.error).message);return}
+ reMsg('reCadastroMsg','');reFontes=f.data||[];reRecebimentos=r.data||[];
+ reEl('reCatalogo').innerHTML=reFontes.map(x=>`<tr><td>${reSafe(x.nome)}</td><td>${x.ativa?'Ativa':'Inativa'}</td><td><button class="secondary" onclick="reEditarFonte('${x.id}')">EDITAR</button> <button class="danger" onclick="reExcluirFonte('${x.id}')">EXCLUIR</button></td></tr>`).join('')||'<tr><td colspan="3">Nenhuma renda cadastrada.</td></tr>';
+ reEl('reFonte').innerHTML='<option value="">Selecione</option>'+reFontes.filter(x=>x.ativa).map(x=>`<option value="${x.id}">${reSafe(x.nome)}</option>`).join('');
+ reEl('reHistorico').innerHTML=reRecebimentos.map(x=>`<tr><td>${dataBR(x.data_recebimento)}</td><td>${reSafe(x.descricao)}</td><td>${money(x.valor)}</td><td>${reSafe(reDescreverFormas(x.formas_recebimento))}</td><td><button class="secondary" onclick="reEditar('${x.id}')">EDITAR</button> <button class="danger" onclick="reExcluir('${x.id}')">EXCLUIR</button></td></tr>`).join('')||'<tr><td colspan="5">Nenhum recebimento no mês.</td></tr>';
+ reEl('reTotal').textContent=money(reRecebimentos.reduce((a,x)=>a+Number(x.valor||0),0));
+}
+async function reCadastrar(){const nome=reEl('reNome').value.trim();if(!nome){reMsg('reCadastroMsg','Informe o nome da renda.');return}const {error}=await sb.from('rendas_extras').insert({nome});if(error){reMsg('reCadastroMsg','Não foi possível cadastrar: '+error.message);return}reEl('reNome').value='';await reCarregar();reMsg('reCadastroMsg','Renda cadastrada. Nenhum recebimento foi lançado.');}
+async function reEditarFonte(id){
+ const fonte=reFontes.find(x=>String(x.id)===String(id));if(!fonte)return;
+ const nome=prompt('Editar nome da renda:',fonte.nome);if(nome===null)return;
+ const novo=nome.trim();if(!novo){alert('Informe o nome da renda.');return}
+ if(novo===fonte.nome)return;
+ if(!await reAutorizar())return;
+ const {error}=await sb.from('rendas_extras').update({nome:novo}).eq('id',id);
+ if(error){alert('Não foi possível editar: '+error.message);return}
+ await reCarregar();
+}
+async function reExcluirFonte(id){
+ const fonte=reFontes.find(x=>String(x.id)===String(id));if(!fonte)return;
+ const {count,error:checkError}=await sb.from('renda_extra_recebimentos').select('id',{count:'exact',head:true}).eq('renda_id',id);
+ if(checkError){alert('Não foi possível verificar os recebimentos: '+checkError.message);return}
+ if(count>0){alert('Esta renda possui '+count+' recebimento(s) vinculado(s). Para preservar o histórico financeiro, exclua os recebimentos antes de excluir o cadastro.');return}
+ if(!confirm('Excluir definitivamente a renda "'+fonte.nome+'"?'))return;
+ if(!await reAutorizar())return;
+ const {error}=await sb.from('rendas_extras').delete().eq('id',id);
+ if(error){alert('Não foi possível excluir: '+error.message);return}
+ await reCarregar();
+}
+async function reAlternar(id,ativa){const {error}=await sb.from('rendas_extras').update({ativa}).eq('id',id);if(error){alert(error.message);return}await reCarregar()}
+const reFormasDisponiveis=['Dinheiro','PIX Academia','PIX Eliane','PIX Stéfano','Débito','Crédito','Crédito parcelado','Outra'];
+function reAtualizarFormas(){const misto=reEl('reForma').value==='Misto';reEl('reMistoBox').style.display=misto?'block':'none';reEl('reParcelasBox').style.display=reEl('reForma').value==='Crédito parcelado'?'block':'none';if(misto&&!reEl('reMistoLinhas').children.length){reAdicionarForma();reAdicionarForma()}}
+function reAdicionarForma(forma='',valor='',parcelas=''){
+ const linha=document.createElement('div');linha.className='re-misto-linha';linha.style.cssText='display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:8px 0';
+ const opts=reFormasDisponiveis.map(f=>`<option value="${f}" ${f===forma?'selected':''}>${f}</option>`).join('');
+ linha.innerHTML=`<div style="flex:2;min-width:155px"><label>Forma</label><select class="re-misto-forma"><option value="">Selecione</option>${opts}</select></div><div style="flex:1;min-width:105px"><label>Valor (R$)</label><input class="re-misto-valor" type="number" min="0.01" step="0.01" value="${Number(valor)||''}"></div><div class="re-misto-parcelas-box" style="display:none;flex:1;min-width:100px"><label>Parcelas</label><input class="re-misto-parcelas" type="number" min="2" max="120" step="1" value="${Number(parcelas)||''}"></div><button class="secondary" type="button">REMOVER</button>`;
+ linha.querySelector('button').onclick=()=>linha.remove();linha.querySelector('select').onchange=()=>{linha.querySelector('.re-misto-parcelas-box').style.display=linha.querySelector('select').value==='Crédito parcelado'?'block':'none'};
+ reEl('reMistoLinhas').appendChild(linha);linha.querySelector('select').dispatchEvent(new Event('change'));
+}
+function reObterFormas(valor){
+ const forma=reEl('reForma').value;if(!forma)throw Error('Selecione a forma de recebimento.');
+ let linhas=[];
+ if(forma==='Misto'){
+  linhas=[...reEl('reMistoLinhas').children].map(l=>({forma:l.querySelector('select').value,valor:Number(l.querySelector('.re-misto-valor').value),parcelas:l.querySelector('.re-misto-parcelas').value}));
+  if(linhas.length<2)throw Error('Informe pelo menos duas formas para o recebimento misto.');
+ }else linhas=[{forma,valor,parcelas:reEl('reParcelas').value}];
+ let centavos=0;
+ for(const x of linhas){if(!reFormasDisponiveis.includes(x.forma)||!Number.isFinite(x.valor)||x.valor<=0)throw Error('Preencha todas as formas e valores corretamente.');
+  if(Math.abs(x.valor*100-Math.round(x.valor*100))>0.00001)throw Error('Use no máximo duas casas decimais.');
+  centavos+=Math.round(x.valor*100);
+  if(x.forma==='Crédito parcelado'){const n=Number(x.parcelas);if(!Number.isInteger(n)||n<2||n>120)throw Error('Informe um número de parcelas entre 2 e 120.');x.parcelas=n}else delete x.parcelas;
+ }
+ if(centavos!==Math.round(valor*100))throw Error('A soma das formas deve ser igual ao valor total recebido.');
+ return linhas;
+}
+function reDescreverFormas(formas){if(!Array.isArray(formas)||!formas.length)return 'Não informado (registro anterior)';return formas.map(x=>x.forma+(x.parcelas?' ('+x.parcelas+'x)':'')+(formas.length>1?' — '+money(x.valor):'')).join(' + ')}
+async function reRegistrar(){
+ const renda_id=reEl('reFonte').value,data_recebimento=reEl('reData').value,valor=Number(reEl('reValor').value);
+ if(!renda_id||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(data_recebimento)||!Number.isFinite(valor)||valor<=0){reMsg('reRecebMsg','Selecione uma renda, a data e um valor maior que zero.');return}
+ let formas_recebimento;try{formas_recebimento=reObterFormas(valor)}catch(e){reMsg('reRecebMsg',e.message);return}
+ const fonte=reFontes.find(x=>x.id===renda_id);if(!fonte)return;
+ const btn=document.querySelector('#reRecebMsg').previousElementSibling.querySelector('button');if(btn.disabled)return;btn.disabled=true;
+ try{const {error}=await sb.from('renda_extra_recebimentos').insert({renda_id,descricao:fonte.nome,data_recebimento,valor,formas_recebimento});if(error){reMsg('reRecebMsg','Não foi possível registrar: '+error.message);return}
+ reEl('reValor').value='';reEl('reForma').value='';reEl('reParcelas').value='';reEl('reMistoLinhas').innerHTML='';reAtualizarFormas();reEl('reMes').value=data_recebimento.slice(0,7);await reCarregar();await updateDashboard();reMsg('reRecebMsg','Recebimento registrado com sucesso.');}
+ finally{btn.disabled=false}
+}
+async function reAutorizar(){return await confirmarSenhaAdministrador()}
+async function reEditar(id){const x=reRecebimentos.find(z=>z.id===id);if(!x)return;const novaData=prompt('Data do recebimento (AAAA-MM-DD):',x.data_recebimento);if(novaData===null)return;const novoValor=prompt('Valor recebido (R$):',String(x.valor));if(novoValor===null)return;const valor=Number(novoValor.replace(',','.'));if(!/^\d{4}-\d{2}-\d{2}$/.test(novaData)||!Number.isFinite(valor)||valor<=0){alert('Data ou valor inválido.');return}let formas=x.formas_recebimento;
+ if(Array.isArray(formas)&&formas.length&&Number(valor)!==Number(x.valor)){
+  alert('Para alterar o valor de um recebimento com formas registradas, exclua e registre novamente com a divisão correta.');return;
+ }
+ if(!await reAutorizar())return;const {error}=await sb.from('renda_extra_recebimentos').update({data_recebimento:novaData,valor}).eq('id',id);if(error){alert(error.message);return}await reCarregar();await updateDashboard()}
+async function reExcluir(id){if(!confirm('Excluir este recebimento? O valor será retirado dos totais.'))return;if(!await reAutorizar())return;const {error}=await sb.from('renda_extra_recebimentos').delete().eq('id',id);if(error){alert(error.message);return}await reCarregar();await updateDashboard()}
+</script>
+<script>
+/* Etapa 32 — Integração da Renda Extra. Não altera Pagamentos nem cria lançamentos automáticos. */
+(function(){
+ const valorRE = n => money(Number(n)||0);
+ const somarRE = linhas => (linhas||[]).reduce((total,x)=>total+Number(x.valor||0),0);
+ const porDiaRE = (linhas,dia) => somarRE(linhas.filter(x=>x.data_recebimento===dia));
+ async function consultarRE(inicio,fim){
+   const r=await sb.from('renda_extra_recebimentos').select('id,descricao,data_recebimento,valor,formas_recebimento')
+     .gte('data_recebimento',inicio).lte('data_recebimento',fim)
+     .order('data_recebimento',{ascending:false});
+   if(r.error)throw r.error;
+   return r.data||[];
+ }
+ function atualizarTotalRE(id,acrescimo){
+   const el=document.getElementById(id);
+   if(!el || el.textContent==='Indisponível')return;
+   const txt=el.textContent;
+   const valor=Number(txt.replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',','.'));
+   if(Number.isFinite(valor))el.textContent=valorRE(valor+acrescimo);
+ }
+ const atualizarDashboardOriginal=updateDashboard;
+ updateDashboard=async function(...args){
+   await atualizarDashboardOriginal.apply(this,args);
+   if(!sb)return;
+   const hoje=localDate(),inicio=hoje.slice(0,7)+'-01',fim=addDaysISO(addMonthsISO(inicio,1),-1);
+   try{
+     const linhas=await consultarRE(inicio,fim);
+     const dia=porDiaRE(linhas,hoje),mes=somarRE(linhas);
+     atualizarTotalRE('painelDiaTotal',dia);
+     atualizarTotalRE('painelMesTotal',mes);
+     document.getElementById('reResumoDia').textContent='Renda Extra recebida hoje: '+valorRE(dia);
+     document.getElementById('reResumoMes').textContent='Renda Extra recebida no mês: '+valorRE(mes);
+   }catch(e){
+     document.getElementById('reResumoDia').textContent='Renda Extra indisponível — verificar configuração.';
+     document.getElementById('reResumoMes').textContent='Renda Extra indisponível — verificar configuração.';
+     console.warn('Renda Extra: consulta do painel falhou',e);
+   }
+ };
+ const gerarRelatorioOriginal=gerarRelatorio;
+ gerarRelatorio=async function(...args){
+   await gerarRelatorioOriginal.apply(this,args);
+   if(!sb)return;
+   const modo=document.getElementById('rPeriodo').value,hoje=localDate();
+   let inicio=hoje,fim=hoje;
+   if(modo==='month'){inicio=hoje.slice(0,7)+'-01';fim=addDaysISO(addMonthsISO(inicio,1),-1)}
+   if(modo==='custom'){inicio=document.getElementById('rFrom').value;fim=document.getElementById('rTo').value}
+   if(modo==='specific_month'){const m=document.getElementById('rMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return;inicio=m+'-01';fim=addDaysISO(addMonthsISO(inicio,1),-1)}
+   if(!inicio||!fim)return;
+   const info=document.getElementById('rRendaExtraInfo');
+   const lista=document.getElementById('rRendaExtraLista');
+   const filtroAluno=String(document.getElementById('rAlunoBusca').value||'').trim();
+   try{
+     const linhas=await consultarRE(inicio,fim),total=somarRE(linhas);
+     document.getElementById('rRendaExtra').textContent=valorRE(total);
+     lista.innerHTML=linhas.map(x=>'<tr><td>'+dataBR(x.data_recebimento)+'</td><td>'+esc(x.descricao)+'</td><td>'+valorRE(x.valor)+'</td><td>'+esc(reDescreverFormas(x.formas_recebimento))+'</td></tr>').join('');
+     // Integração visual das formas ao resumo existente; os totais são atualizados apenas no bloco financeiro abaixo.
+     if(!filtroAluno){
+       const resumo=document.getElementById('rMethods');
+       const valores={};
+       for(const x of linhas){
+         const formas=Array.isArray(x.formas_recebimento)&&x.formas_recebimento.length?x.formas_recebimento:[{forma:'Não informada (registro anterior)',valor:x.valor}];
+         for(const f of formas){
+           const nome=String(f.forma||'Não informada');
+           const v=Number(f.valor);
+           if(Number.isFinite(v))valores[nome]=(valores[nome]||0)+v;
+         }
+       }
+       if(resumo&&linhas.length){
+         const bloco=document.createElement('div');
+         bloco.id='reResumoFormasRelatorio';
+         bloco.style.cssText='margin-top:12px;padding-top:10px;border-top:1px solid #ddd';
+         const titulo=document.createElement('strong');titulo.textContent='Renda Extra por forma de recebimento';bloco.appendChild(titulo);
+         Object.entries(valores).sort((a,b)=>a[0].localeCompare(b[0],'pt-BR')).forEach(([forma,v])=>{
+           const linha=document.createElement('div');linha.style.cssText='display:flex;justify-content:space-between;max-width:450px';
+           const nome=document.createElement('span');nome.textContent=forma;
+           const valor=document.createElement('b');valor.textContent=valorRE(v);
+           linha.append(nome,valor);bloco.appendChild(linha);
+         });
+         resumo.appendChild(bloco);
+       }
+     }
+     info.textContent=linhas.length?linhas.length+' recebimento(s) de Renda Extra no período.':'Nenhum recebimento de Renda Extra no período.';
+     // Renda Extra é receita geral, não vinculada a aluno: não entra no total filtrado por aluno.
+     if(!filtroAluno){
+       atualizarTotalRE('rTotal',total);
+       atualizarTotalRE('rRegistrado',total);
+       atualizarTotalRE('rEfetivo',total);
+       document.getElementById('rFinanceiroInfo').textContent+=' Renda Extra efetivamente recebida: '+valorRE(total)+'.';
+     }else info.textContent+=' Receita geral da academia: não incluída nos totais filtrados por aluno.';
+   }catch(e){
+     document.getElementById('rRendaExtra').textContent='Indisponível';
+     lista.innerHTML='';
+     info.textContent='Não foi possível consultar Renda Extra. Verifique as tabelas e permissões no Supabase.';
+     console.warn('Renda Extra: consulta do relatório falhou',e);
+   }
+ };
+})();
+</script>
+<script id="vs-range-reports-js">
+(function(){
+let year,month,first=null,last=null;
+const months=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const pad=n=>String(n).padStart(2,'0');
+const iso=(y,m,d)=>`${y}-${pad(m+1)}-${pad(d)}`;
+const br=v=>v?v.slice(8,10)+'/'+v.slice(5,7)+'/'+v.slice(0,4):'Escolha a data';
+const shift=(y,m,delta)=>{const d=new Date(y,m+delta,1);return [d.getFullYear(),d.getMonth()]};
+window.vsRangeSync=function(){const a=document.getElementById('rFrom')?.value,b=document.getElementById('rTo')?.value,t=document.getElementById('vsRangeText');if(t)t.textContent=a&&b?br(a)+' — '+br(b):'Escolha a data de início — Escolha a data final'};
+window.vsRangeClose=function(){document.getElementById('vsRangeShade')?.remove()};
+window.vsRangeOpen=function(){
+ window.vsRangeClose();const a=document.getElementById('rFrom').value,b=document.getElementById('rTo').value;
+ first=null;last=null;const base=a&&/^\d{4}-\d{2}-\d{2}$/.test(a)?new Date(Number(a.slice(0,4)),Number(a.slice(5,7))-1,1):new Date();year=base.getFullYear();month=base.getMonth();
+ const shade=document.createElement('div');shade.id='vsRangeShade';shade.className='vs-range-shade';shade.innerHTML='<div class="vs-range-panel" role="dialog" aria-modal="true" aria-label="Escolher período"><div class="vs-range-top"><strong>Escolha o período</strong><button type="button" id="vsRangeExit">Fechar ×</button></div><div class="vs-range-months" id="vsRangeMonths"></div><div class="vs-range-bottom"><span id="vsRangeSummary"></span><button type="button" class="primary" id="vsRangeConfirm">Confirmar</button></div></div>';
+ shade.addEventListener('click',e=>{if(e.target===shade)window.vsRangeClose()});document.body.append(shade);
+ document.getElementById('vsRangeExit').onclick=window.vsRangeClose;
+ document.getElementById('vsRangeConfirm').onclick=()=>{if(!first)return;const from=first,to=last||first;document.getElementById('rFrom').value=from;document.getElementById('rTo').value=to;window.vsRangeSync();window.vsRangeClose();if(typeof gerarRelatorio==='function')gerarRelatorio()};
+ render();
+};
+function render(){const target=document.getElementById('vsRangeMonths');if(!target)return;target.replaceChildren();
+ for(let idx=0;idx<2;idx++){
+ const [y,m]=shift(year,month,idx);const wrap=document.createElement('div');
+ const nav=document.createElement('div');nav.className='vs-range-nav';
+ const prev=document.createElement('button');prev.type='button';prev.textContent=idx===0?'‹':'«';prev.title='Mês anterior';prev.onclick=()=>{[year,month]=shift(year,month,idx===0?-1:-12);render()};nav.append(prev);
+ const selM=document.createElement('select');months.forEach((name,i)=>{const op=new Option(name,i,i===m,i===m);selM.add(op)});selM.onchange=()=>{[year,month]=shift(y,Number(selM.value),-idx);render()};nav.append(selM);
+ const selY=document.createElement('select');for(let yy=y-20;yy<=y+20;yy++){const op=new Option(String(yy),String(yy),yy===y,yy===y);selY.add(op)}selY.onchange=()=>{[year,month]=shift(Number(selY.value),m,-idx);render()};nav.append(selY);
+ const next=document.createElement('button');next.type='button';next.textContent=idx===1?'›':'»';next.title='Próximo mês';next.onclick=()=>{[year,month]=shift(year,month,idx===1?1:12);render()};nav.append(next);wrap.append(nav);
+ const grid=document.createElement('div');grid.className='vs-range-grid';['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].forEach(t=>{const el=document.createElement('span');el.className='vs-range-week';el.textContent=t;grid.append(el)});
+ const offset=(new Date(y,m,1).getDay()+6)%7;for(let j=0;j<offset;j++){const empty=document.createElement('span');grid.append(empty)}
+ const days=new Date(y,m+1,0).getDate();for(let day=1;day<=days;day++){const val=iso(y,m,day),btn=document.createElement('button');btn.type='button';btn.className='vs-range-day';btn.textContent=day;if(val===first||val===last)btn.classList.add('selected');else if(first&&last&&val>first&&val<last)btn.classList.add('between');btn.onclick=()=>{if(!first||last){first=val;last=null}else if(val<first){last=first;first=val}else{last=val}render()};grid.append(btn)}wrap.append(grid);target.append(wrap);
+ }
+ const summary=document.getElementById('vsRangeSummary');summary.textContent=first?(br(first)+' — '+(last?br(last):'Selecione o final (ou clique novamente no mesmo dia)')):'Selecione a data de início';
+}
+})();
+</script>
 <script id="vs-ex-range-js">
 (function(){
 let year,month,first=null,last=null;
