@@ -872,7 +872,11 @@ async function carregarHistoricoFichaAluno(codigo){
    const formaTexto=formas.length?formas.map(inicialMaiuscula).join(' + '):parcelas.length?'Crédito parcelado':erroFormas?'Indisponível':'—';
    const totalParcelas=parcelas.reduce((n,pc)=>Math.max(n,Number(pc.total_parcelas)||0),0);
    const textoParcelas=erroParcelas?'Indisponível':totalParcelas>1?totalParcelas+'x':'Única';
-   return {data:x.data_pagamento||'',html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc(plano||'—')}</td><td>${money(x.valor_total||0)}</td><td>${esc(formaTexto)}</td><td>${esc(textoParcelas)}</td></tr>`};
+   // Nos planos parcelados, Lançamentos usa a data_prevista da 1ª parcela
+   // como data exibida. Adotar a mesma referência no Histórico, sem gravar dados.
+   const primeiraParcela=parcelas.find(pc=>Number(pc.numero_parcela)===1)||parcelas.slice().sort((a,b)=>Number(a.numero_parcela)-Number(b.numero_parcela))[0];
+   const dataHistorico=totalParcelas>1&&primeiraParcela?.data_prevista?primeiraParcela.data_prevista:x.data_pagamento;
+   return {data:dataHistorico||'',html:`<tr><td>${dataBR(dataHistorico)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc(plano||'—')}</td><td>${money(x.valor_total||0)}</td><td>${esc(formaTexto)}</td><td>${esc(textoParcelas)}</td></tr>`};
   });
   linhas.sort((a,b)=>String(b.data).localeCompare(String(a.data)));
   area.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Plano</th><th>Valor</th><th>Pagamento</th><th>Parcelas</th></tr></thead><tbody>'+linhas.map(x=>x.html).join('')+'</tbody></table></div>';
