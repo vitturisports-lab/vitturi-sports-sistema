@@ -866,8 +866,10 @@ async function carregarHistoricoFichaAluno(codigo){
    const temMatricula=tipo==='mensalidade'&&Number(x.taxa_matricula_valor||0)>0;
    const plano=descricao+(temMatricula&&!/taxa de matr[ií]cula/i.test(descricao)?' + Taxa de matrícula':'');
    const formas=formasPorId.get(String(x.id))||[];
-   const formaTexto=erroFormas?'Indisponível':formas.length?formas.map(inicialMaiuscula).join(' + '):'—';
    const parcelas=parcelasPorId.get(String(x.id))||[];
+   // Parcelas de crédito vinculadas comprovam a modalidade mesmo quando
+   // o pagamento original não tem registro na tabela pagamento_formas.
+   const formaTexto=formas.length?formas.map(inicialMaiuscula).join(' + '):parcelas.length?'Crédito parcelado':erroFormas?'Indisponível':'—';
    const totalParcelas=parcelas.reduce((n,pc)=>Math.max(n,Number(pc.total_parcelas)||0),0);
    const textoParcelas=erroParcelas?'Indisponível':totalParcelas>1?totalParcelas+'x':'Única';
    return {data:x.data_pagamento||'',html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc(plano||'—')}</td><td>${money(x.valor_total||0)}</td><td>${esc(formaTexto)}</td><td>${esc(textoParcelas)}</td></tr>`};
