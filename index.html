@@ -859,30 +859,22 @@ async function carregarHistoricoFichaAluno(codigo){
    else (p.data||[]).forEach(x=>{const k=String(x.pagamento_id);if(!parcelasPorId.has(k))parcelasPorId.set(k,[]);parcelasPorId.get(k).push(x)});
   }
   const inicialMaiuscula=v=>{const t=String(v||'').trim();return t?t.charAt(0).toLocaleUpperCase('pt-BR')+t.slice(1):'—'};
-  if(erroParcelas){area.textContent='Não foi possível consultar as parcelas do histórico. Nenhum registro foi alterado.'}
-  else{
-   const linhas=pag.data.flatMap(x=>{
-    const tipo=String(x.tipo||'').trim().toLocaleLowerCase('pt-BR');
-    const plano=String(x.descricao||'').trim()+(tipo==='mensalidade'&&Number(x.taxa_matricula_valor||0)>0?' + Taxa de matrícula':'');
-    const formas=formasPorId.get(String(x.id))||[];
-    const formaTexto=erroFormas?'Indisponível':formas.length?formas.map(inicialMaiuscula).join(' + '):'—';
-    const parcelas=(parcelasPorId.get(String(x.id))||[]).sort((a,b)=>Number(a.numero_parcela)-Number(b.numero_parcela));
-    if(!parcelas.length)return [{data:x.data_pagamento,ordem:0,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc(plano||'—')}</td><td>${money(x.valor_total||0)}</td><td>${esc(formaTexto)}</td><td>${esc(inicialMaiuscula(x.status_recebimento))}</td></tr>`}];
-    return parcelas.map(pc=>{
-     const numero=Number(pc.numero_parcela),total=Number(pc.total_parcelas);
-     const recebida=String(pc.status||'').trim().toLocaleLowerCase('pt-BR')==='recebida';
-     // A primeira parcela é a operação de cartão já registrada no Atendimento.
-     // As demais só são recebidas quando o banco confirma a baixa individual.
-     const primeiraRegistrada=numero===1&&!erroFormas&&formas.some(f=>String(f).trim().toLocaleLowerCase('pt-BR')==='crédito parcelado');
-     const confirmado=recebida||primeiraRegistrada;
-     const data=recebida&&pc.data_recebida?pc.data_recebida:(primeiraRegistrada?x.data_pagamento:pc.data_prevista);
-     const pagamento=confirmado?(recebida&&formas.length?formaTexto:'Crédito parcelado'):'—';
-     return {data:data||'',ordem:numero,html:`<tr><td>${dataBR(data)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc((plano||'—')+' ('+numero+'/'+total+')')}</td><td>${money(pc.valor||0)}</td><td>${esc(pagamento)}</td><td>${confirmado?'Recebido':'Pendente'}</td></tr>`};
-    });
-   });
-   linhas.sort((a,b)=>String(b.data).localeCompare(String(a.data))||a.ordem-b.ordem);
-   area.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Plano</th><th>Valor</th><th>Pagamento</th><th>Situação</th></tr></thead><tbody>'+linhas.map(x=>x.html).join('')+'</tbody></table></div>';
-  }
+  // Histórico consolidado: uma linha por operação, sem listar vencimentos futuros do cartão.
+  const linhas=pag.data.map(x=>{
+   const tipo=String(x.tipo||'').trim().toLocaleLowerCase('pt-BR');
+   const descricao=String(x.descricao||'').trim();
+   const temMatricula=tipo==='mensalidade'&&Number(x.taxa_matricula_valor||0)>0;
+   const plano=descricao+(temMatricula&&!/taxa de matr[ií]cula/i.test(descricao)?' + Taxa de matrícula':'');
+   const formas=formasPorId.get(String(x.id))||[];
+   const formaTexto=erroFormas?'Indisponível':formas.length?formas.map(inicialMaiuscula).join(' + '):'—';
+   const parcelas=parcelasPorId.get(String(x.id))||[];
+   const totalParcelas=parcelas.reduce((n,pc)=>Math.max(n,Number(pc.total_parcelas)||0),0);
+   const textoParcelas=erroParcelas?'Indisponível':totalParcelas>1?totalParcelas+'x':'Única';
+   return {data:x.data_pagamento||'',html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(inicialMaiuscula(x.tipo))}</td><td>${esc(plano||'—')}</td><td>${money(x.valor_total||0)}</td><td>${esc(formaTexto)}</td><td>${esc(textoParcelas)}</td></tr>`};
+  });
+  linhas.sort((a,b)=>String(b.data).localeCompare(String(a.data)));
+  area.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Plano</th><th>Valor</th><th>Pagamento</th><th>Parcelas</th></tr></thead><tbody>'+linhas.map(x=>x.html).join('')+'</tbody></table></div>';
+
  }
  if(gym.error){secaoGym.classList.remove('hidden');gymArea.textContent='Não foi possível consultar os check-ins: '+gym.error.message}
  else if(gym.data?.length){secaoGym.classList.remove('hidden');gymArea.innerHTML='<div style="overflow:auto"><table><thead><tr><th>Data</th><th>Check-in do mês</th><th>Valor</th></tr></thead><tbody>'+gym.data.map(x=>`<tr><td>${dataBR(x.data_checkin)}</td><td>${esc(x.numero_checkin||'—')}º</td><td>${money(x.valor||0)}</td></tr>`).join('')+'</tbody></table></div>'}
