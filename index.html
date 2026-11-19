@@ -307,6 +307,12 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .payment-row,.int-payrow{align-items:end!important}
 .payment-row .vs-money-edit,.int-payrow .vs-money-edit{align-self:end}
 </style>
+<style id="vs-calendarios-e-financeiro-fix">
+#inicio .vs-consulta-dia{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px 0;font-size:13px}
+#inicio .vs-consulta-dia label{margin:0;white-space:nowrap;color:#183c70;font-weight:600}
+#inicio .vs-consulta-dia input{width:172px;max-width:100%;height:38px;padding:6px 10px;font:inherit;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#152c4c}
+#inicio .vs-consulta-dia input:focus{outline:2px solid #80a9e7;outline-offset:1px}
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -415,7 +421,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <section class="tab active" id="inicio">
 <div class="vs-home-heading"><h2>Início</h2><p class="muted">Resumo da movimentação e avisos da academia</p></div>
 <div class="vs-home-top">
-<article class="vs-home-panel"><h2>Movimento do Dia <small id="painelDataDia" class="muted"></small></h2><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelDiaMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelDiaTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelDiaVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelDiaAval">R$ 0,00</b></div><div class="vs-home-total"><strong>Total do Dia</strong><strong id="painelDiaTotal">R$ 0,00</strong></div><p class="muted" id="reResumoDia">Renda Extra: R$ 0,00</p></div><p class="muted" id="painelDiaWellHub"></p></article>
+<article class="vs-home-panel"><h2>Movimento do Dia <small id="painelDataDia" class="muted"></small></h2><div class="vs-consulta-dia"><label for="vsConsultaDia">Consultar data:</label><input type="date" id="vsConsultaDia" aria-label="Data do movimento" onchange="updateDashboard()"></div><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelDiaMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelDiaTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelDiaVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelDiaAval">R$ 0,00</b></div><div class="vs-home-total"><strong>Total do Dia</strong><strong id="painelDiaTotal">R$ 0,00</strong></div><p class="muted" id="reResumoDia">Renda Extra: R$ 0,00</p></div><p class="muted" id="painelDiaWellHub"></p></article>
 <article class="vs-home-panel"><h2>Resumo do Mês <small id="painelMesNome" class="muted"></small></h2><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelMesMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelMesTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelMesVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelMesAval">R$ 0,00</b></div><div class="vs-home-total"><strong>Total Recebido</strong><strong id="painelMesTotal">R$ 0,00</strong></div><p class="muted" id="reResumoMes">Renda Extra: R$ 0,00</p></div></article>
 <article class="vs-home-panel"><h2>GymPass / WellHub</h2><div class="vs-home-lines"><div><span>Check-ins no mês</span><b id="vsWhCount">—</b></div><div><span>Valor previsto a receber</span><b id="vsWhForecast">R$ 0,00</b></div></div><p class="muted"><a href="#" onclick="go('relatorios');return false">Ver detalhes em Relatórios</a></p><div class="hidden"><span id="painelWellHubStatus"></span><span id="painelWellHubReferencia"></span><span id="painelWellHubValor"></span><span id="painelWellHubInfo"></span></div></article>
 </div>
@@ -434,7 +440,7 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <div><label>Nome *</label><input id="aNome"></div>
 <div><label>CPF</label><input id="aCpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="this.value=formatarCPF(this.value)"></div>
 <div><label>Data de nascimento</label><input id="aNasc" type="date"></div>
-<div><label>Gênero</label><select id="aGenero"><option value="">Selecione</option><option>Feminino</option><option>Masculino</option><option>Outro</option></select></div>
+<div><label>Gênero</label><select id="aGenero"><option value="">Selecione</option><option>Feminino</option><option>Masculino</option></select></div>
 <div><label>Telefone</label><input id="aTel" placeholder="(00) 00000-0000" type="tel" inputmode="tel" maxlength="15" oninput="this.value=formatarTelefone(this.value)"></div>
 <div><label>Data de cadastro (data real de entrada)</label><input id="aCadastro" type="date"></div>
 
@@ -1883,11 +1889,14 @@ await carregarWellHub();await updateDashboard();
 
 async function updateDashboard(){
  if(!sb)return;
- const hoje=localDate(), mes=hoje.slice(0,7), inicio=mes+'-01', fim=addMonthsISO(inicio,1);
+ const hoje=localDate(), campoDia=document.getElementById('vsConsultaDia');
+ if(campoDia&&!campoDia.value)campoDia.value=hoje;
+ const diaConsulta=campoDia?.value||hoje;
+ const mes=hoje.slice(0,7), inicio=mes+'-01', fim=addMonthsISO(inicio,1);
  const anterior=addMonthsISO(inicio,-1).slice(0,7);
  const meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
  const mesNome=m=>meses[Number(m.slice(5,7))-1]+'/'+m.slice(0,4);
- document.getElementById('painelDataDia').textContent=dataBR(hoje);
+ document.getElementById('painelDataDia').textContent=dataBR(diaConsulta);
  document.getElementById('painelMesNome').textContent=meses[Number(mes.slice(5,7))-1].replace(/^./,c=>c.toUpperCase())+' / '+mes.slice(0,4);
  document.getElementById('painelWellHubReferencia').textContent='Referente aos check-ins de '+mesNome(anterior);
  const [pagMes,pagRecebidos,whMes,whAnterior,checks]=await Promise.all([
@@ -1912,25 +1921,44 @@ async function updateDashboard(){
   if(p.status_recebimento==='Pendente'||p.data_pagamento>=inicio)continue;
   recebidos.push({...p,dia:p.data_recebimento});
  }
- const pagamentos=recebidos;
+ // Consulta de dia fora do mês corrente: buscar somente registros relevantes ao dia selecionado.
+ let pagamentos=recebidos;
+ if(diaConsulta.slice(0,7)!==mes){
+  const diaSeguinte=addDaysISO(diaConsulta,1);
+  const [historicoData,historicoRecebimento]=await Promise.all([
+   sb.from('Pagamentos').select('id,tipo,descricao,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').eq('data_pagamento',diaConsulta),
+   sb.from('Pagamentos').select('id,tipo,descricao,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').eq('data_recebimento',diaConsulta)
+  ]);
+  if(historicoData.error||historicoRecebimento.error){document.getElementById('painelErro').textContent='Não foi possível consultar a data selecionada.';return;}
+  const porId=new Map();
+  // Identidade estável pelo conjunto de campos; evita contar duas vezes o mesmo lançamento.
+  [...(historicoData.data||[]),...(historicoRecebimento.data||[])].forEach(p=>{
+   if(String(p.status_recebimento||'').toLowerCase()==='pendente')return;
+   const dia=p.data_recebimento||p.data_pagamento;
+   if(dia!==diaConsulta)return;
+   porId.set(String(p.id),{...p,dia});
+  });
+  pagamentos=[...porId.values()];
+ }
+
  function calcular(dia){
   const lista=pagamentos.filter(p=>!dia||p.dia===dia);
   const soma=f=>lista.filter(f).reduce((n,p)=>n+Number(p.valor_total||0),0);
   const tipo=p=>String(p.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-  const taxa=lista.filter(p=>tipo(p)==='mensalidade').reduce((n,p)=>n+Number(p.taxa_matricula_valor||0),0);
-  const mensal=soma(p=>tipo(p)==='mensalidade')-taxa;
+  const taxa=lista.reduce((n,p)=>n+(tipo(p)==='mensalidade'?Number(p.taxa_matricula_valor||0):(/taxa.*matricul/.test(tipo(p))?Number(p.valor_total||0):0)),0);
+  const mensal=soma(p=>tipo(p)==='mensalidade')-lista.filter(p=>tipo(p)==='mensalidade').reduce((n,p)=>n+Number(p.taxa_matricula_valor||0),0);
   return {mensal,taxa,vendas:soma(p=>tipo(p)==='venda'),aval:soma(p=>tipo(p)==='avaliacao')};
  }
  const wellhub=(whMes.data||[]).filter(r=>r.status==='Recebido');
  const whTotal=wellhub.reduce((n,r)=>n+Number(r.valor_recebido||0),0);
- const whDia=wellhub.filter(r=>r.data_recebimento===hoje).reduce((n,r)=>n+Number(r.valor_recebido||0),0);
+ const whDia=wellhub.filter(r=>r.data_recebimento===diaConsulta).reduce((n,r)=>n+Number(r.valor_recebido||0),0);
  function mostrar(prefixo,dia,wh){
   const t=calcular(dia);
   for(const [chave,valor] of Object.entries({Mens:t.mensal,Taxa:t.taxa,Vendas:t.vendas,Aval:t.aval}))document.getElementById(prefixo+chave).textContent=money(valor);
   document.getElementById(prefixo+'Total').textContent=money(t.mensal+t.taxa+t.vendas+t.aval+wh);
  }
- mostrar('painelDia',hoje,whDia);mostrar('painelMes',null,whTotal);
- document.getElementById('painelDiaWellHub').textContent=whDia?'Inclui '+money(whDia)+' de WellHub recebido hoje.':'';
+ mostrar('painelDia',diaConsulta,whDia);mostrar('painelMes',null,whTotal);
+ document.getElementById('painelDiaWellHub').textContent=whDia?'Inclui '+money(whDia)+' de WellHub recebido na data consultada.':'';
  const registro=whAnterior.data, recebido=registro?.status==='Recebido';
  const previsto=(checks.data||[]).reduce((n,c)=>n+Number(c.valor||0),0);
  const status=document.getElementById('painelWellHubStatus');
@@ -2584,10 +2612,10 @@ async function gerarRelatorio(){
  const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
  // Estoque: calcular pela data real do recebimento, nunca pela data de venda pendente.
  const vendasPagasResp=await sb.from('Pagamentos').select('id,aluno_codigo,valor_total,data_pagamento,data_recebimento,status_recebimento,tipo')
-   .eq('tipo','venda').eq('status_recebimento','Recebido').lte('data_pagamento',end);
+   .eq('tipo','venda').lte('data_pagamento',end);
  const vendasPagasPeriodo=(vendasPagasResp.data||[]).filter(pg=>{
    const recebimento=pg.data_recebimento||pg.data_pagamento;
-   return recebimento>=start&&recebimento<=end&&(!busca||codigos.has(String(pg.aluno_codigo))||String(pg.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
+   return String(pg.status_recebimento||'').trim().toLowerCase()!=='pendente'&&recebimento>=start&&recebimento<=end&&(!busca||codigos.has(String(pg.aluno_codigo))||String(pg.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
  });
  let custoVendido=0,estoqueErro=vendasPagasResp.error;
  const idsVendasPagas=vendasPagasPeriodo.map(pg=>pg.id);
