@@ -1991,6 +1991,8 @@ async function updateDashboard(){
  }else info.textContent='Ainda não incluído no total recebido.';
  vsRenderAniversariantes();
  await vsAtualizarInicio(inicio,fim,hoje);
+ // Atualiza o resumo das vendas pendentes sem abrir a listagem.
+ await carregarVendasPendentes();
 }
 
 function vsToggle(id){
@@ -2128,31 +2130,6 @@ function vsImprimirAniversariantes(){
 
 
 
-
-<style id="vs-ajustes-inicio-20261119">
-/* As receitas extras seguem o mesmo alinhamento das demais linhas do painel. */
-#painelDiaExtras > div, #painelMesExtras > div {
- display:flex;align-items:center;justify-content:space-between;gap:12px;
- padding:9px 0;border-bottom:1px solid #dbe4ef;
-}
-#painelDiaExtras > div > span, #painelMesExtras > div > span {flex:1;min-width:0;overflow-wrap:anywhere;}
-#painelDiaExtras > div > b, #painelMesExtras > div > b {flex:none;white-space:nowrap;text-align:right;}
-</style>
-<script id="vs-vendas-resumo-automatico-20261119">
-/* Consulta o resumo sem abrir a listagem, preservando a rotina existente. */
-(function(){
- const original=vsAtualizarInicio;
- let consulta=0;
- vsAtualizarInicio=async function(...args){
-  const atual=++consulta;
-  const resultado=await original.apply(this,args);
-  if(atual===consulta && typeof carregarVendasPendentes==='function'){
-   carregarVendasPendentes().catch(e=>console.warn('Resumo de vendas pendentes:',e));
-  }
-  return resultado;
- };
-})();
-</script>
 </body></html>`);janela.document.close();
  vsAnivAvisoNovo='';const aviso=document.getElementById('vsAnivAviso');if(aviso){aviso.textContent='Cartaz aberto para impressão.';aviso.classList.remove('warn')}
 }
@@ -3910,29 +3887,13 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){cl
 })();
 </script>
 
-<style id="vs-ajustes-inicio-20261119">
-/* As receitas extras seguem o mesmo alinhamento das demais linhas do painel. */
+<style id="vs-extras-alinhamento">
 #painelDiaExtras > div, #painelMesExtras > div {
- display:flex;align-items:center;justify-content:space-between;gap:12px;
- padding:9px 0;border-bottom:1px solid #dbe4ef;
+ display:flex; align-items:center; justify-content:space-between; gap:12px;
+ padding:9px 0; border-bottom:1px solid #dbe4ef;
 }
 #painelDiaExtras > div > span, #painelMesExtras > div > span {flex:1;min-width:0;overflow-wrap:anywhere;}
 #painelDiaExtras > div > b, #painelMesExtras > div > b {flex:none;white-space:nowrap;text-align:right;}
 </style>
-<script id="vs-vendas-resumo-automatico-20261119">
-/* Consulta o resumo sem abrir a listagem, preservando a rotina existente. */
-(function(){
- const original=vsAtualizarInicio;
- let consulta=0;
- vsAtualizarInicio=async function(...args){
-  const atual=++consulta;
-  const resultado=await original.apply(this,args);
-  if(atual===consulta && typeof carregarVendasPendentes==='function'){
-   carregarVendasPendentes().catch(e=>console.warn('Resumo de vendas pendentes:',e));
-  }
-  return resultado;
- };
-})();
-</script>
 </body>
 </html>
