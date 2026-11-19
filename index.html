@@ -323,6 +323,12 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 .vs-date-foot{display:flex;justify-content:space-between;align-items:center;margin-top:15px;border-top:1px solid #e7ecf3;padding-top:12px;gap:8px}.vs-date-foot button{border:0;background:#edf2f8;border-radius:7px;padding:9px 13px;cursor:pointer;color:#2258a4}
 @media(max-width:500px){.vs-date-dialog{padding:13px}}
 </style>
+<style>
+/* Cadastro: datas digitáveis, sem ícone de calendário. */
+#aNasc::-webkit-calendar-picker-indicator,
+#aCadastro::-webkit-calendar-picker-indicator,
+#aVencimento::-webkit-calendar-picker-indicator { display:none; -webkit-appearance:none; }
+</style>
 </head>
 <body>
 <div id="boasVindas" role="dialog" aria-modal="true" aria-labelledby="bvTitulo">
@@ -3797,8 +3803,8 @@ function render(){if(!overlay||!target)return;const dlg=overlay.querySelector('.
 function open(input){if(overlay&&target===input)return;close();target=input;const dt=localDate(input.value)||new Date();year=dt.getFullYear();month=dt.getMonth();overlay=document.createElement('div');overlay.className='vs-date-backdrop';overlay.innerHTML='<div class="vs-date-dialog" role="dialog" aria-modal="true" aria-label="Selecionar data"></div>';document.body.appendChild(overlay);overlay.addEventListener('click',function(e){if(e.target===overlay){close();return;}const btn=e.target.closest('button');if(!btn)return;const action=btn.dataset.action;if(action==='close'){close();return;}if(action==='prev'||action==='next'){const d=new Date(year,month+(action==='prev'?-1:1),1);year=d.getFullYear();month=d.getMonth();render();return;}if(action==='clear'){setValue('');return;}if(action==='today'){const d=new Date();setValue(iso(d.getFullYear(),d.getMonth(),d.getDate()));return;}if(btn.dataset.day){setValue(iso(year,month,Number(btn.dataset.day)));}});overlay.addEventListener('change',e=>{if(e.target.dataset.action==='month')month=Number(e.target.value);if(e.target.dataset.action==='year')year=Number(e.target.value);render();});render();}
 function setValue(value){const el=target;close();if(!el)return;el.value=value;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}
 /* Captura também os campos de data criados dinamicamente por edições. */
-document.addEventListener('pointerdown',function(e){const input=e.target.closest&&e.target.closest('input[type="date"]');if(!input||input.disabled||input.closest('.vs-range-shade'))return;e.preventDefault();open(input);},true);
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){close();return;}const input=e.target.closest&&e.target.closest('input[type="date"]');if(input&&!input.disabled&&(e.key==='Enter'||e.key===' '||e.key==='ArrowDown')){e.preventDefault();open(input);}},true);
+document.addEventListener('pointerdown',function(e){const input=e.target.closest&&e.target.closest('input[type="date"]');if(!input||input.disabled||input.closest('.vs-range-shade')||['aNasc','aCadastro','aVencimento'].includes(input.id))return;e.preventDefault();open(input);},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){close();return;}const input=e.target.closest&&e.target.closest('input[type="date"]');if(input&&!input.disabled&&!['aNasc','aCadastro','aVencimento'].includes(input.id)&&(e.key==='Enter'||e.key===' '||e.key==='ArrowDown')){e.preventDefault();open(input);}},true);
 })();
 </script>
 </body>
