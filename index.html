@@ -2652,18 +2652,20 @@ async function gerarRelatorioInterno(){
  if(mode==='specific_month'){const m=document.getElementById('rMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return;start=m+'-01';end=addMonthsISO(start,1);end=addDaysISO(end,-1)}
  if(!start||!end)return;
  // Consultas independentes iniciadas juntas para reduzir a espera do relatório.
- const [p,cp,vendasPagasResp,pr]=await Promise.all([
+ const [p,cp,vendasPagasResp,pr,wh,g]=await Promise.all([
    sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false}),
    sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end),
    sb.from('Pagamentos').select('id,aluno_codigo,valor_total,data_pagamento,data_recebimento,status_recebimento,tipo').ilike('tipo','venda').lte('data_pagamento',end),
-   sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista')
+   sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista'),
+   sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento').eq('status','Recebido').gte('data_recebimento',start).lte('data_recebimento',end),
+   sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false})
  ]);
  if(p.error){document.getElementById('rFiltroInfo').textContent='Erro ao consultar pagamentos: '+p.error.message;return}
  const busca=document.getElementById('rAlunoBusca').value.trim().toLocaleLowerCase('pt-BR');
  const codigos=busca?new Set(alunos.filter(a=>String(a.codigo).toLocaleLowerCase('pt-BR').includes(busca)||String(a.nome||'').toLocaleLowerCase('pt-BR').includes(busca)).map(a=>String(a.codigo))):null;
  const payments=(p.data||[]).filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
  // A contagem será atualizada depois de consultar as parcelas por vencimento.
- document.getElementById('rFiltroInfo').textContent='Consultando lançamentos e parcelas do período...';
+ // O status permanece estável enquanto o relatório é calculado.
  let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
  let total=payments.reduce((s,x)=>s+Number(x.valor_total||0),0),mens=payments.filter(x=>x.tipo==='mensalidade').reduce((s,x)=>s+Number(x.valor_total||0)-Number(x.taxa_matricula_valor||0),0),vendas=payments.filter(x=>String(x.tipo||'').trim().toLocaleLowerCase('pt-BR')==='venda'&&String(x.status_recebimento||'').trim().toLocaleLowerCase('pt-BR')!=='pendente').reduce((s,x)=>s+Number(x.valor_total||0),0),avs=payments.filter(x=>String(x.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()==='avaliacao').reduce((s,x)=>s+Number(x.valor_total||0),0);
  document.getElementById('rTotal').textContent=money(total);
@@ -2798,7 +2800,7 @@ async function gerarRelatorioInterno(){
    return {data:x.data_pagamento,html:`<tr><td>${dataBR(x.data_pagamento)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${esc(tipoBR(x.tipo))}</td><td>${descricao}</td><td>${money(valorExibido)}</td><td>${pagamentoTexto}</td><td>Única</td><td>${acoes}</td></tr>`};
  });
  const parcelasLancadas=parcelasVisiveis.filter(x=>x.data_prevista<=limiteParcelas);
- document.getElementById('rFiltroInfo').textContent=busca?`${linhasOriginais.length+parcelasLancadas.length} lançamento(s) encontrado(s) para a pesquisa neste período (${linhasOriginais.length} pagamento(s) à vista e ${parcelasLancadas.length} parcela(s) por vencimento).`:'Exibindo pagamentos e parcelas vencidas de todos os alunos no período.';
+ const mensagemFiltroFinal=busca?`${linhasOriginais.length+parcelasLancadas.length} lançamento(s) encontrado(s) para a pesquisa neste período (${linhasOriginais.length} pagamento(s) à vista e ${parcelasLancadas.length} parcela(s) por vencimento).`:'Exibindo pagamentos e parcelas vencidas de todos os alunos no período.';
   // Consulta apenas para mostrar o nome do plano; não altera pagamentos nem parcelas.
   const planoPorPagamento=new Map(payments.map(x=>[Number(x.id),x]));
   const idsPlanos=[...new Set(parcelasLancadas.map(x=>Number(x.pagamento_id)).filter(id=>Number.isSafeInteger(id)&&!planoPorPagamento.has(id)))];
@@ -2813,6 +2815,7 @@ async function gerarRelatorioInterno(){
     return {data:x.data_prevista,html:`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>Mensalidade</td><td>${esc(plano)}</td><td>${money(x.valor)}</td><td>Crédito parcelado</td><td>${parcelaTexto}</td><td><button type="button" class="secondary" onclick="editarPlanoParceladoSeguro(${Number(x.pagamento_id)})">Editar</button> <button type="button" class="danger" onclick="excluirPlanoParceladoSeguro(${Number(x.pagamento_id)})">Excluir</button></td></tr>`};
   });
  document.getElementById('rList').innerHTML=[...linhasOriginais,...linhasParceladas].sort((a,b)=>b.data.localeCompare(a.data)).map(x=>x.html).join('');
+ document.getElementById('rFiltroInfo').textContent=mensagemFiltroFinal;
  const parcelasFuturas=parcelasVisiveis.filter(x=>x.data_prevista>limiteParcelas);
  document.getElementById('rParcelasSummary').textContent=`${parcelasFuturas.length} parcela(s) programada(s) após ${dataBR(limiteParcelas)} — ${money(parcelasFuturas.reduce((s,x)=>s+Number(x.valor||0),0))}.`;
  document.getElementById('rParcelasList').innerHTML=parcelasFuturas.map(x=>`<tr><td>${dataBR(x.data_prevista)}</td><td>${esc(x.aluno_codigo)} — ${nomeAluno(x.aluno_codigo)}</td><td>${x.numero_parcela}/${x.total_parcelas}</td><td>${money(x.valor)}</td></tr>`).join('');
@@ -2952,7 +2955,7 @@ async function gerarRelatorioInterno(){
  document.getElementById('rVendas').textContent=money(categoriasRecebidas.venda);
  document.getElementById('rLucroBruto').textContent=estoqueErro?'Indisponível':money(totalVendasRecebidas-custoVendido);
  document.getElementById('rAv').textContent=money(categoriasRecebidas.avaliacao);
- const wh=await sb.from('Repasses_WellHub').select('valor_recebido,data_recebimento').eq('status','Recebido').gte('data_recebimento',start).lte('data_recebimento',end);
+ 
  const whTotal=(wh.data||[]).reduce((t,r)=>t+Number(r.valor_recebido||0),0);
  document.getElementById('rWellHubRecebido').textContent=wh.error?'Indisponível':money(whTotal);
  if(!wh.error&&!busca){
@@ -2992,7 +2995,7 @@ async function gerarRelatorioInterno(){
    const aviso=document.getElementById('rConferenciaFinanceira');
    if(aviso)aviso.textContent='Conferência indisponível para este filtro ou por erro de consulta.';
  }
- const g=await sb.from('gympass_checkins').select('*').gte('data_checkin',start).lte('data_checkin',end).order('data_checkin',{ascending:false});let gs=g.data||[];const porAlunoMes={};const ordinais=new Map();[...gs].sort((a,b)=>String(a.data_checkin).localeCompare(String(b.data_checkin))||Number(a.id)-Number(b.id)).forEach(x=>{const k=String(x.aluno_codigo).trim()+'|'+String(x.data_checkin).slice(0,7);porAlunoMes[k]=(porAlunoMes[k]||0)+1;ordinais.set(x.id,porAlunoMes[k]);});
+ let gs=g.data||[];const porAlunoMes={};const ordinais=new Map();[...gs].sort((a,b)=>String(a.data_checkin).localeCompare(String(b.data_checkin))||Number(a.id)-Number(b.id)).forEach(x=>{const k=String(x.aluno_codigo).trim()+'|'+String(x.data_checkin).slice(0,7);porAlunoMes[k]=(porAlunoMes[k]||0)+1;ordinais.set(x.id,porAlunoMes[k]);});
  // Teste 30: aplicar a mesma pesquisa por aluno aos check-ins, sem alterar os registros nem a apuração geral.
  if(busca)gs=gs.filter(x=>codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
  const alunoUnico=busca&&codigos.size===1?alunos.find(a=>codigos.has(String(a.codigo))):null;
