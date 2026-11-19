@@ -2640,11 +2640,14 @@ async function gerarRelatorio(){
  });
  let custoVendido=0,estoqueErro=vendasPagasResp.error;
  const idsVendasPagas=vendasPagasPeriodo.map(pg=>pg.id);
- for(let i=0;i<idsVendasPagas.length&&!estoqueErro;i+=100){
-   const movimento=await sb.from('movimentos_estoque').select('pagamento_id,quantidade,custo_unitario')
-     .eq('tipo','Venda').in('pagamento_id',idsVendasPagas.slice(i,i+100));
-   if(movimento.error){estoqueErro=movimento.error;break;}
-   custoVendido+=(movimento.data||[]).reduce((s,x)=>s+Math.abs(Number(x.quantidade||0))*Number(x.custo_unitario||0),0);
+ if(!estoqueErro){
+   const lotesVendas=[];
+   for(let i=0;i<idsVendasPagas.length;i+=100)lotesVendas.push(idsVendasPagas.slice(i,i+100));
+   const movimentos=await Promise.all(lotesVendas.map(lote=>sb.from('movimentos_estoque').select('pagamento_id,quantidade,custo_unitario').eq('tipo','Venda').in('pagamento_id',lote)));
+   for(const movimento of movimentos){
+     if(movimento.error){estoqueErro=movimento.error;break;}
+     custoVendido+=(movimento.data||[]).reduce((s,x)=>s+Math.abs(Number(x.quantidade||0))*Number(x.custo_unitario||0),0);
+   }
  }
  const totalVendasRecebidas=vendasPagasPeriodo.reduce((s,pg)=>s+Number(pg.valor_total||0),0);
  document.getElementById('rCompras').textContent=cp.error?'Indisponível':money(compraTotal);
@@ -2695,8 +2698,10 @@ async function gerarRelatorio(){
  // Identifica pagamentos parcelados também quando a primeira parcela está fora do período.
  const idsPeriodo=payments.map(x=>x.id);
  const pagamentosComParcelas=new Set();
- for(let i=0;i<idsPeriodo.length;i+=100){
-   const r=await sb.from('parcelas_credito').select('pagamento_id').in('pagamento_id',idsPeriodo.slice(i,i+100));
+ const lotesIdsPeriodo=[];
+ for(let i=0;i<idsPeriodo.length;i+=100)lotesIdsPeriodo.push(idsPeriodo.slice(i,i+100));
+ const respostasVinculos=await Promise.all(lotesIdsPeriodo.map(lote=>sb.from('parcelas_credito').select('pagamento_id').in('pagamento_id',lote)));
+ for(const r of respostasVinculos){
    if(r.error){document.getElementById('rFiltroInfo').textContent='Não foi possível conferir vínculos das parcelas: '+r.error.message;return;}
    (r.data||[]).forEach(x=>pagamentosComParcelas.add(Number(x.pagamento_id)));
  }
