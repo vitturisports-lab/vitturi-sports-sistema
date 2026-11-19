@@ -437,11 +437,11 @@ body>header>div{color:#d21e32!important;font-size:17px!important;font-weight:700
 <section class="tab active" id="inicio">
 <div class="vs-home-heading"><h2>Início</h2><p class="muted">Resumo da movimentação e avisos da academia</p></div>
 <div class="vs-home-top">
-<article class="vs-home-panel"><h2>Movimento do Dia <small id="painelDataDia" class="muted"></small></h2><div class="vs-consulta-dia"><label for="vsConsultaDia">Consultar data:</label><input type="date" id="vsConsultaDia" aria-label="Data do movimento" onchange="updateDashboard()"></div><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelDiaMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelDiaTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelDiaVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelDiaAval">R$ 0,00</b></div><div class="vs-home-total"><strong>Total do Dia</strong><strong id="painelDiaTotal">R$ 0,00</strong></div><p class="muted" id="reResumoDia">Renda Extra: R$ 0,00</p></div><p class="muted" id="painelDiaWellHub"></p></article>
-<article class="vs-home-panel"><h2>Resumo do Mês <small id="painelMesNome" class="muted"></small></h2><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelMesMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelMesTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelMesVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelMesAval">R$ 0,00</b></div><div class="vs-home-total"><strong>Total Recebido</strong><strong id="painelMesTotal">R$ 0,00</strong></div><p class="muted" id="reResumoMes">Renda Extra: R$ 0,00</p></div></article>
+<article class="vs-home-panel"><h2>Movimento do Dia <small id="painelDataDia" class="muted"></small></h2><div class="vs-consulta-dia"><label for="vsConsultaDia">Consultar data:</label><input type="date" id="vsConsultaDia" aria-label="Data do movimento" onchange="updateDashboard()"></div><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelDiaMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelDiaTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelDiaVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelDiaAval">R$ 0,00</b></div><div id="painelDiaWellHubLinha" style="display:none"><span>WellHub</span><b>R$ 0,00</b></div><div id="painelDiaExtras"></div><div class="vs-home-total"><strong>Total do Dia</strong><strong id="painelDiaTotal">R$ 0,00</strong></div><p class="muted" id="reResumoDia" style="display:none"></p></div><p class="muted" id="painelDiaWellHub" style="display:none"></p></article>
+<article class="vs-home-panel"><h2>Resumo do Mês <small id="painelMesNome" class="muted"></small></h2><div class="vs-home-lines"><div><span>Mensalidades</span><b id="painelMesMens">R$ 0,00</b></div><div><span>Taxa de matrícula</span><b id="painelMesTaxa">R$ 0,00</b></div><div><span>Vendas</span><b id="painelMesVendas">R$ 0,00</b></div><div><span>Avaliações</span><b id="painelMesAval">R$ 0,00</b></div><div id="painelMesWellHubLinha" style="display:none"><span>WellHub</span><b>R$ 0,00</b></div><div id="painelMesExtras"></div><div class="vs-home-total"><strong>Total Recebido</strong><strong id="painelMesTotal">R$ 0,00</strong></div><p class="muted" id="reResumoMes" style="display:none"></p></div></article>
 <article class="vs-home-panel"><h2>GymPass / WellHub</h2><div class="vs-home-lines"><div><span>Check-ins no mês</span><b id="vsWhCount">—</b></div><div><span>Valor previsto a receber</span><b id="vsWhForecast">R$ 0,00</b></div></div><p class="muted"><a href="#" onclick="go('relatorios');return false">Ver detalhes em Relatórios</a></p><div class="hidden"><span id="painelWellHubStatus"></span><span id="painelWellHubReferencia"></span><span id="painelWellHubValor"></span><span id="painelWellHubInfo"></span></div></article>
 </div>
-<div class="vs-home-panel"><h2>Pendências e Avisos</h2><div class="vs-alert-grid"><button class="vs-alert vs-amber" onclick="vsToggle('vsPlanosDetalhe')"><b>Planos a vencer e vencidos</b><span id="vsPlanosResumo">Consultar avisos</span><small>Ver listagem ▾</small></button><button class="vs-alert vs-blue" onclick="vsToggle('vsPendentesDetalhe')"><b>Vendas a receber</b><span id="vsPendentesResumo">Consultando...</span><small>Ver listagem ▾</small></button><button class="vs-alert vs-pink" onclick="vsToggle('vsEstoqueDetalhe')"><b>Estoque baixo</b><span id="vsEstoqueResumo">Consultar estoque</span><small>Ver listagem ▾</small></button></div><div id="vsPlanosDetalhe" class="vs-details hidden"></div><div id="vsPendentesDetalhe" class="vs-details hidden"><div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Data da compra</th><th>Aluno</th><th>Produto</th><th style="text-align:center">Quantidade</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div></div><div id="vsEstoqueDetalhe" class="vs-details hidden"></div></div>
+<div class="vs-home-panel"><h2>Pendências e Avisos</h2><div class="vs-alert-grid"><button class="vs-alert vs-amber" onclick="vsToggle('vsPlanosDetalhe')"><b>Planos a vencer e vencidos</b><span id="vsPlanosResumo">Consultar avisos</span><small>Ver listagem ▾</small></button><button class="vs-alert vs-blue" onclick="vsToggle('vsPendentesDetalhe')"><b>Vendas a receber</b><span id="vsPendentesResumo">Verifique na listagem</span><small>Ver listagem ▾</small></button><button class="vs-alert vs-pink" onclick="vsToggle('vsEstoqueDetalhe')"><b>Estoque baixo</b><span id="vsEstoqueResumo">Consultar estoque</span><small>Ver listagem ▾</small></button></div><div id="vsPlanosDetalhe" class="vs-details hidden"></div><div id="vsPendentesDetalhe" class="vs-details hidden"><div class="box"><h2>Vendas a receber</h2><p class="muted">Vendas pendentes não integram o caixa. O recebimento é registrado na data efetiva.</p><div id="vendasPendentesMensagem" class="status"></div><div style="overflow:auto"><table><thead><tr><th>Data da compra</th><th>Aluno</th><th>Produto</th><th style="text-align:center">Quantidade</th><th>Valor</th><th>Vencimento</th><th>Ação</th></tr></thead><tbody id="vendasPendentesLista"></tbody></table></div></div></div><div id="vsEstoqueDetalhe" class="vs-details hidden"></div></div>
 <div class="vs-home-bottom"><article class="vs-home-panel"><h2>Atendimentos Recentes</h2><div class="vs-tablewrap"><table><thead><tr><th>Data</th><th>Aluno</th><th>Tipo</th><th>Valor</th></tr></thead><tbody id="vsRecentes"><tr><td colspan="4">Consultando...</td></tr></tbody></table></div></article><article class="vs-home-panel vs-aniversarios"><h2>Aniversariantes do Mês <span id="vsAnivMes" class="vs-aniv-mes"></span></h2><p id="vsAnivAviso" class="muted">Consultando aniversariantes...</p><div class="vs-tablewrap"><table><thead><tr><th>Dia</th><th>Aluno</th></tr></thead><tbody id="vsAnivLista"><tr><td colspan="2">Consultando...</td></tr></tbody></table></div><button type="button" class="primary" id="vsAnivImprimir" onclick="vsImprimirAniversariantes()" disabled>Imprimir lista</button></article></div><div id="painelErro" class="muted" role="status"></div>
 </section>
 
@@ -1974,7 +1974,11 @@ async function updateDashboard(){
   document.getElementById(prefixo+'Total').textContent=money(t.mensal+t.taxa+t.vendas+t.aval+wh);
  }
  mostrar('painelDia',diaConsulta,whDia);mostrar('painelMes',null,whTotal);
- document.getElementById('painelDiaWellHub').textContent=whDia?'Inclui '+money(whDia)+' de WellHub recebido na data consultada.':'';
+ for(const [prefixo,valor] of [['Dia',whDia],['Mes',whTotal]]){
+  const linha=document.getElementById('painel'+prefixo+'WellHubLinha');
+  linha.style.display=valor?'':'none';linha.querySelector('b').textContent=money(valor);
+ }
+ document.getElementById('painelDiaWellHub').textContent='';
  const registro=whAnterior.data, recebido=registro?.status==='Recebido';
  const previsto=(checks.data||[]).reduce((n,c)=>n+Number(c.valor||0),0);
  const status=document.getElementById('painelWellHubStatus');
@@ -2124,6 +2128,31 @@ function vsImprimirAniversariantes(){
 
 
 
+
+<style id="vs-ajustes-inicio-20261119">
+/* As receitas extras seguem o mesmo alinhamento das demais linhas do painel. */
+#painelDiaExtras > div, #painelMesExtras > div {
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ padding:9px 0;border-bottom:1px solid #dbe4ef;
+}
+#painelDiaExtras > div > span, #painelMesExtras > div > span {flex:1;min-width:0;overflow-wrap:anywhere;}
+#painelDiaExtras > div > b, #painelMesExtras > div > b {flex:none;white-space:nowrap;text-align:right;}
+</style>
+<script id="vs-vendas-resumo-automatico-20261119">
+/* Consulta o resumo sem abrir a listagem, preservando a rotina existente. */
+(function(){
+ const original=vsAtualizarInicio;
+ let consulta=0;
+ vsAtualizarInicio=async function(...args){
+  const atual=++consulta;
+  const resultado=await original.apply(this,args);
+  if(atual===consulta && typeof carregarVendasPendentes==='function'){
+   carregarVendasPendentes().catch(e=>console.warn('Resumo de vendas pendentes:',e));
+  }
+  return resultado;
+ };
+})();
+</script>
 </body></html>`);janela.document.close();
  vsAnivAvisoNovo='';const aviso=document.getElementById('vsAnivAviso');if(aviso){aviso.textContent='Cartaz aberto para impressão.';aviso.classList.remove('warn')}
 }
@@ -3574,22 +3603,40 @@ async function reExcluir(id){if(!confirm('Excluir este recebimento? O valor ser�
    if(Number.isFinite(valor))el.textContent=valorRE(valor+acrescimo);
  }
  const atualizarDashboardOriginal=updateDashboard;
+ let sequenciaPainel=0;
  updateDashboard=async function(...args){
+   const seq=++sequenciaPainel;
    await atualizarDashboardOriginal.apply(this,args);
-   if(!sb)return;
-   const hoje=localDate(),inicio=hoje.slice(0,7)+'-01',fim=addDaysISO(addMonthsISO(inicio,1),-1);
-   try{
-     const linhas=await consultarRE(inicio,fim);
-     const dia=porDiaRE(linhas,hoje),mes=somarRE(linhas);
-     atualizarTotalRE('painelDiaTotal',dia);
-     atualizarTotalRE('painelMesTotal',mes);
-     document.getElementById('reResumoDia').textContent='Renda Extra recebida hoje: '+valorRE(dia);
-     document.getElementById('reResumoMes').textContent='Renda Extra recebida no mês: '+valorRE(mes);
-   }catch(e){
-     document.getElementById('reResumoDia').textContent='Renda Extra indisponível — verificar configuração.';
-     document.getElementById('reResumoMes').textContent='Renda Extra indisponível — verificar configuração.';
-     console.warn('Renda Extra: consulta do painel falhou',e);
+   if(!sb || seq!==sequenciaPainel)return;
+   const hoje=localDate();
+   const diaConsulta=document.getElementById('vsConsultaDia')?.value||hoje;
+   const inicio=hoje.slice(0,7)+'-01',fim=addDaysISO(addMonthsISO(inicio,1),-1);
+   const inicioConsulta=diaConsulta<inicio?diaConsulta:inicio;
+   const fimConsulta=diaConsulta>fim?diaConsulta:fim;
+   function exibirLinhas(id,linhas){
+     const alvo=document.getElementById(id);if(!alvo)return;
+     alvo.replaceChildren();
+     const grupos=new Map();
+     for(const x of linhas){
+       const nome=String(x.descricao||'Renda extra').trim()||'Renda extra';
+       grupos.set(nome,(grupos.get(nome)||0)+Number(x.valor||0));
+     }
+     for(const [nome,valor] of grupos){
+       const linha=document.createElement('div'),rotulo=document.createElement('span'),total=document.createElement('b');
+       rotulo.textContent=nome;total.textContent=valorRE(valor);
+       linha.append(rotulo,total);alvo.appendChild(linha);
+     }
    }
+   try{
+     const linhas=await consultarRE(inicioConsulta,fimConsulta);
+     if(seq!==sequenciaPainel)return;
+     const linhasDia=linhas.filter(x=>x.data_recebimento===diaConsulta);
+     const linhasMes=linhas.filter(x=>x.data_recebimento>=inicio&&x.data_recebimento<=fim);
+     atualizarTotalRE('painelDiaTotal',somarRE(linhasDia));
+     atualizarTotalRE('painelMesTotal',somarRE(linhasMes));
+     exibirLinhas('painelDiaExtras',linhasDia);
+     exibirLinhas('painelMesExtras',linhasMes);
+   }catch(e){console.warn('Renda Extra: consulta do painel falhou',e);}
  };
  const gerarRelatorioOriginal=gerarRelatorio;
  gerarRelatorio=async function(...args){
@@ -3860,6 +3907,31 @@ function setValue(value){const el=target;close();if(!el)return;el.value=value;el
 /* Captura também os campos de data criados dinamicamente por edições. */
 document.addEventListener('pointerdown',function(e){const input=e.target.closest&&e.target.closest('input[type="date"]');if(!input||input.disabled||input.closest('.vs-range-shade')||['aNasc','aCadastro','aVencimento'].includes(input.id))return;e.preventDefault();open(input);},true);
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){close();return;}const input=e.target.closest&&e.target.closest('input[type="date"]');if(input&&!input.disabled&&!['aNasc','aCadastro','aVencimento'].includes(input.id)&&(e.key==='Enter'||e.key===' '||e.key==='ArrowDown')){e.preventDefault();open(input);}},true);
+})();
+</script>
+
+<style id="vs-ajustes-inicio-20261119">
+/* As receitas extras seguem o mesmo alinhamento das demais linhas do painel. */
+#painelDiaExtras > div, #painelMesExtras > div {
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ padding:9px 0;border-bottom:1px solid #dbe4ef;
+}
+#painelDiaExtras > div > span, #painelMesExtras > div > span {flex:1;min-width:0;overflow-wrap:anywhere;}
+#painelDiaExtras > div > b, #painelMesExtras > div > b {flex:none;white-space:nowrap;text-align:right;}
+</style>
+<script id="vs-vendas-resumo-automatico-20261119">
+/* Consulta o resumo sem abrir a listagem, preservando a rotina existente. */
+(function(){
+ const original=vsAtualizarInicio;
+ let consulta=0;
+ vsAtualizarInicio=async function(...args){
+  const atual=++consulta;
+  const resultado=await original.apply(this,args);
+  if(atual===consulta && typeof carregarVendasPendentes==='function'){
+   carregarVendasPendentes().catch(e=>console.warn('Resumo de vendas pendentes:',e));
+  }
+  return resultado;
+ };
 })();
 </script>
 </body>
