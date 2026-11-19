@@ -953,13 +953,13 @@ async function loadAll(){
  ]);
  [alunos,planos,produtos,tiposAv]=q.map(x=>x.data||[]);
  if(q.some(x=>x.error)){alert('Erro ao carregar dados: '+q.find(x=>x.error).error.message);return}
- fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await preencherProdutosCompra();await carregarHistoricoCompras();await preencherProdutosRetirada();await carregarHistoricoRetiradas();updateDashboard();loadGymConfig();
+ fillPlanSelect();renderAlunos();renderPlanos();renderProdutos();renderTiposAv();await Promise.all([preencherProdutosCompra(),preencherProdutosRetirada()]);updateDashboard();loadGymConfig();void Promise.allSettled([carregarHistoricoCompras(),carregarHistoricoRetiradas()]);
  if(document.getElementById("vsAnivLista"))vsRenderAniversariantes();
  if(document.getElementById("vsProfLista") && document.getElementById("professores").classList.contains("active"))await vsProfCarregar();
  // Reexibe o aluno selecionado com os dados recém-carregados do Supabase.
  if(document.getElementById('pCodigo').value.trim())buscarAtendimento();
 }
-async function startApp(){document.getElementById('app').classList.remove('hidden');await loadAll();document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('retData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate()}
+async function startApp(){document.getElementById('app').classList.remove('hidden');document.getElementById('pData').value=localDate();document.getElementById('rFrom').value=localDate();document.getElementById('rTo').value=localDate();document.getElementById('compData').value=localDate();document.getElementById('retData').value=localDate();document.getElementById('rMonth').value=localDate().slice(0,7);document.getElementById('exInicio').value=localDate().slice(0,7)+'-01';document.getElementById('exFim').value=localDate();await loadAll()}
 
 function fillPlanSelect(){/* O plano é definido e atualizado no pagamento da mensalidade. */}
 // Classificação exclusiva para avisos e status de vencimento; não altera o plano salvo.
@@ -2616,7 +2616,13 @@ async function gerarRelatorio(){
  if(mode==='custom'){start=document.getElementById('rFrom').value;end=document.getElementById('rTo').value}
  if(mode==='specific_month'){const m=document.getElementById('rMonth').value;if(!/^\d{4}-\d{2}$/.test(m))return;start=m+'-01';end=addMonthsISO(start,1);end=addDaysISO(end,-1)}
  if(!start||!end)return;
- const p=await sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false});
+ // Consultas independentes iniciadas juntas para reduzir a espera do relatório.
+ const [p,cp,vendasPagasResp,pr]=await Promise.all([
+   sb.from('Pagamentos').select('*').gte('data_pagamento',start).lte('data_pagamento',end).order('data_pagamento',{ascending:false}),
+   sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end),
+   sb.from('Pagamentos').select('id,aluno_codigo,valor_total,data_pagamento,data_recebimento,status_recebimento,tipo').ilike('tipo','venda').lte('data_pagamento',end),
+   sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista')
+ ]);
  if(p.error){document.getElementById('rFiltroInfo').textContent='Erro ao consultar pagamentos: '+p.error.message;return}
  const busca=document.getElementById('rAlunoBusca').value.trim().toLocaleLowerCase('pt-BR');
  const codigos=busca?new Set(alunos.filter(a=>String(a.codigo).toLocaleLowerCase('pt-BR').includes(busca)||String(a.nome||'').toLocaleLowerCase('pt-BR').includes(busca)).map(a=>String(a.codigo))):null;
@@ -2626,10 +2632,8 @@ async function gerarRelatorio(){
  let ids=payments.map(x=>x.id);let forms=ids.length?(await sb.from('pagamento_formas').select('*').in('pagamento_id',ids)).data||[]:[];
  let total=payments.reduce((s,x)=>s+Number(x.valor_total||0),0),mens=payments.filter(x=>x.tipo==='mensalidade').reduce((s,x)=>s+Number(x.valor_total||0)-Number(x.taxa_matricula_valor||0),0),vendas=payments.filter(x=>String(x.tipo||'').trim().toLocaleLowerCase('pt-BR')==='venda'&&String(x.status_recebimento||'').trim().toLocaleLowerCase('pt-BR')!=='pendente').reduce((s,x)=>s+Number(x.valor_total||0),0),avs=payments.filter(x=>String(x.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase()==='avaliacao').reduce((s,x)=>s+Number(x.valor_total||0),0);
  document.getElementById('rTotal').textContent=money(total);
- const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
+ const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
  // Estoque: calcular pela data real do recebimento, nunca pela data de venda pendente.
- const vendasPagasResp=await sb.from('Pagamentos').select('id,aluno_codigo,valor_total,data_pagamento,data_recebimento,status_recebimento,tipo')
-   .ilike('tipo','venda').lte('data_pagamento',end);
  const vendasPagasPeriodo=(vendasPagasResp.data||[]).filter(pg=>{
    const recebimento=pg.data_recebimento||pg.data_pagamento;
    return String(pg.status_recebimento||'').trim().toLowerCase()!=='pendente'&&recebimento>=start&&recebimento<=end&&(!busca||codigos.has(String(pg.aluno_codigo))||String(pg.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
@@ -2649,7 +2653,7 @@ async function gerarRelatorio(){
  // Exibição por data prevista: parcelas vencidas/na data entram em Lançamentos;
  // parcelas futuras permanecem na Previsão. Nenhum registro é gravado no banco.
  const limiteParcelas=localDate();
- const pr=await sb.from('parcelas_credito').select('*').gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');
+ 
  if(pr.error){document.getElementById('rFiltroInfo').textContent='Não foi possível consultar as parcelas: '+pr.error.message;return;}
  // Recuperação somente em memória da 1ª parcela ausente da tabela.
  // Exige forma 'Crédito parcelado' e parcelas 2..N comprovadas no mesmo pagamento.
