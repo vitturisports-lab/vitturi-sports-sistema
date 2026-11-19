@@ -2609,7 +2609,42 @@ async function salvarEdicaoPagamento(){
  }catch(e){alert('Não foi possível salvar: '+(e.message||e));botao.disabled=false}
 }
 function fecharEdicaoPagamento(){document.getElementById('edPagamentoModal').classList.add('hidden')}
+// Exibição atômica do relatório: evita números parciais durante as consultas.
+// Não modifica cálculos, tabelas, nem registros do Supabase.
+let vitturiRelatorioEmExecucao=false;
+let vitturiRelatorioPendente=false;
 async function gerarRelatorio(){
+  if(vitturiRelatorioEmExecucao){vitturiRelatorioPendente=true;return;}
+  vitturiRelatorioEmExecucao=true;
+  const campos=['rTotal','rCompras','rCustoVendas','rMethods','rList',
+    'rParcelasSummary','rParcelasList','rRegistrado','rEfetivo','rPendente',
+    'rParcelasRecebidas','rMens','rPersonal','rTaxa','rVendas',
+    'rLucroBruto','rAv','rWellHubRecebido','rGymList','rGymSummary'];
+  const elementos=campos.map(id=>document.getElementById(id)).filter(Boolean);
+  const estilos=elementos.map(el=>el.style.visibility);
+  const info=document.getElementById('rFiltroInfo');
+  const aviso=document.createElement('span');
+  aviso.setAttribute('role','status');
+  aviso.textContent=' Carregando resultados completos…';
+  aviso.style.cssText='display:inline-block;margin:6px 0;font-weight:600;';
+  if(info)info.insertAdjacentElement('afterend',aviso);
+  elementos.forEach(el=>el.style.visibility='hidden');
+  try{
+    await gerarRelatorioInterno();
+  }catch(erro){
+    console.error('Falha ao carregar relatório:',erro);
+    if(info)info.textContent='Não foi possível concluir o relatório. Tente novamente.';
+  }finally{
+    elementos.forEach((el,i)=>el.style.visibility=estilos[i]);
+    aviso.remove();
+    vitturiRelatorioEmExecucao=false;
+    if(vitturiRelatorioPendente){
+      vitturiRelatorioPendente=false;
+      gerarRelatorio();
+    }
+  }
+}
+async function gerarRelatorioInterno(){
  const financeiroInfo=document.getElementById('rFinanceiroInfo');
  if(!sb)return;let mode=document.getElementById('rPeriodo').value,today=localDate(),start=today,end=today;
  if(mode==='month'){let d=new Date();start=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';end=new Date(d.getFullYear(),d.getMonth()+1,0).toISOString().slice(0,10)}
