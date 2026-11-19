@@ -2733,9 +2733,11 @@ async function gerarRelatorio(){
    // Busca pontual para vínculos não retornados pela listagem, inclusive registros antigos.
    const pendentes=payments.filter(x=>normalizaTipo(x.tipo)==='mensalidade'&&!gruposMatricula.has(String(x.id))&&
      payments.some(y=>normalizaTipo(y.tipo)==='taxa de matrícula'&&String(y.aluno_codigo)===String(x.aluno_codigo)&&y.data_pagamento===x.data_pagamento));
-   for(const mensal of pendentes){
-     const resp=await sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').contains('pagamento_ids',[String(mensal.id)]).limit(20);
-     if(!resp.error)(resp.data||[]).forEach(registraGrupo);
+   for(let i=0;i<pendentes.length;i+=10){
+     const respostas=await Promise.all(pendentes.slice(i,i+10).map(mensal=>
+       sb.from('vitturi_atendimentos_integrados').select('pagamento_ids').contains('pagamento_ids',[String(mensal.id)]).limit(20)
+     ));
+     respostas.forEach(resp=>{if(!resp.error)(resp.data||[]).forEach(registraGrupo);});
    }
  }catch(_){/* Sem vínculo confirmado, mantém os lançamentos separados. */}
  const nomeAluno=codigo=>esc(alunos.find(a=>String(a.codigo)===String(codigo))?.nome||'Aluno não localizado');
@@ -2778,9 +2780,7 @@ async function gerarRelatorio(){
  // As parcelas recebidas podem ter sido previstas para outro mês.
  // Regra vigente: cada parcela entra automaticamente na data prevista,
  // inclusive a primeira, sem confirmação manual ou alteração no Supabase.
- const todasParcelasResp=await sb.from('parcelas_credito')
-   .select('id,pagamento_id,aluno_codigo,valor,status,data_prevista,numero_parcela,total_parcelas')
-   .gte('data_prevista',start).lte('data_prevista',end).order('data_prevista');
+ const todasParcelasResp=pr; // Reutiliza a consulta do período, sem repetir acesso ao Supabase.
  const recebidasResp={data:[],error:todasParcelasResp.error};
  const parcelasPeriodo=[...(todasParcelasResp.data||[]),...parcelasPrimeirasVirtuais].filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
  const recebidasFiltradas=parcelasPeriodo.filter(x=>x.data_prevista<=localDate());
@@ -2788,8 +2788,10 @@ async function gerarRelatorio(){
  const formasParceladas=new Set(['crédito parcelado','credito parcelado','cartão de crédito parcelado','cartao de credito parcelado']);
  const formaParcelada=f=>formasParceladas.has(String(f.forma_pagamento||'').trim().toLocaleLowerCase('pt-BR'));
  const pagamentosImediatos=forms.filter(f=>!formaParcelada(f)).reduce((v,f)=>v+Number(f.valor||0),0);
-  const vendasRecebidasOutroPeriodo=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).lt('data_pagamento',start);
-  const vendasRecebidasPosteriores=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).gt('data_pagamento',end);
+  const [vendasRecebidasOutroPeriodo,vendasRecebidasPosteriores]=await Promise.all([
+    sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).lt('data_pagamento',start),
+    sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).gt('data_pagamento',end)
+  ]);
   const recebimentosVendas=[...(vendasRecebidasOutroPeriodo.data||[]),...(vendasRecebidasPosteriores.data||[])].filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca)).reduce((v,x)=>v+Number(x.valor_total||0),0);
   const formasRecebidasForaPeriodo=payments.filter(x=>x.tipo==='venda'&&x.status_recebimento==='Recebido'&&x.data_recebimento&& (x.data_recebimento<start||x.data_recebimento>end)).map(x=>x.id);
   const formasRecebidasForaSet=new Set(formasRecebidasForaPeriodo);
@@ -2831,10 +2833,16 @@ async function gerarRelatorio(){
  // Consulta direta da categoria atual do cadastro, sem depender de listagens filtradas.
  const codigosMensalidades=[...new Set([...payments.filter(x=>tipoFinanceiro(x.tipo)==='mensalidade'),...recebidasFiltradas].map(x=>String(x.aluno_codigo||'').trim()).filter(Boolean))];
  let erroCategoriasAlunos=null;
- for(let i=0;i<codigosMensalidades.length;i+=100){
-   const consulta=await sb.from('Alunos').select('codigo,categoria_aluno').in('codigo',codigosMensalidades.slice(i,i+100));
-   if(consulta.error){erroCategoriasAlunos=consulta.error;break;}
-   for(const a of consulta.data||[])alunoCategoria.set(String(a.codigo).trim(),semAcento(a.categoria_aluno));
+ for(let i=0;i<codigosMensalidades.length;i+=500){
+   const lotes=[];
+   for(let j=i;j<Math.min(i+500,codigosMensalidades.length);j+=100)
+     lotes.push(sb.from('Alunos').select('codigo,categoria_aluno').in('codigo',codigosMensalidades.slice(j,j+100)));
+   const respostas=await Promise.all(lotes);
+   for(const consulta of respostas){
+     if(consulta.error){erroCategoriasAlunos=consulta.error;break;}
+     for(const a of consulta.data||[])alunoCategoria.set(String(a.codigo).trim(),semAcento(a.categoria_aluno));
+   }
+   if(erroCategoriasAlunos)break;
  }
  const categoriasRecebidas={transito:0,personal:0,taxa:0,venda:0,avaliacao:0};
  const pagosPorId=new Map(payments.map(x=>[String(x.id),x]));
