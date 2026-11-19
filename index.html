@@ -2612,7 +2612,7 @@ async function gerarRelatorio(){
  const cp=await sb.from('compras_estoque').select('total_compra').gte('data_compra',start).lte('data_compra',end);const compraTotal=(cp.data||[]).reduce((sum,x)=>sum+Number(x.total_compra||0),0);
  // Estoque: calcular pela data real do recebimento, nunca pela data de venda pendente.
  const vendasPagasResp=await sb.from('Pagamentos').select('id,aluno_codigo,valor_total,data_pagamento,data_recebimento,status_recebimento,tipo')
-   .eq('tipo','venda').lte('data_pagamento',end);
+   .ilike('tipo','venda').lte('data_pagamento',end);
  const vendasPagasPeriodo=(vendasPagasResp.data||[]).filter(pg=>{
    const recebimento=pg.data_recebimento||pg.data_pagamento;
    return String(pg.status_recebimento||'').trim().toLowerCase()!=='pendente'&&recebimento>=start&&recebimento<=end&&(!busca||codigos.has(String(pg.aluno_codigo))||String(pg.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca));
@@ -2767,8 +2767,8 @@ async function gerarRelatorio(){
  const formasParceladas=new Set(['crédito parcelado','credito parcelado','cartão de crédito parcelado','cartao de credito parcelado']);
  const formaParcelada=f=>formasParceladas.has(String(f.forma_pagamento||'').trim().toLocaleLowerCase('pt-BR'));
  const pagamentosImediatos=forms.filter(f=>!formaParcelada(f)).reduce((v,f)=>v+Number(f.valor||0),0);
-  const vendasRecebidasOutroPeriodo=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').eq('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).lt('data_pagamento',start);
-  const vendasRecebidasPosteriores=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').eq('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).gt('data_pagamento',end);
+  const vendasRecebidasOutroPeriodo=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).lt('data_pagamento',start);
+  const vendasRecebidasPosteriores=await sb.from('Pagamentos').select('id,valor_total,aluno_codigo').ilike('tipo','venda').eq('status_recebimento','Recebido').gte('data_recebimento',start).lte('data_recebimento',end).gt('data_pagamento',end);
   const recebimentosVendas=[...(vendasRecebidasOutroPeriodo.data||[]),...(vendasRecebidasPosteriores.data||[])].filter(x=>!busca||codigos.has(String(x.aluno_codigo))||String(x.aluno_codigo).toLocaleLowerCase('pt-BR').includes(busca)).reduce((v,x)=>v+Number(x.valor_total||0),0);
   const formasRecebidasForaPeriodo=payments.filter(x=>x.tipo==='venda'&&x.status_recebimento==='Recebido'&&x.data_recebimento&& (x.data_recebimento<start||x.data_recebimento>end)).map(x=>x.id);
   const formasRecebidasForaSet=new Set(formasRecebidasForaPeriodo);
