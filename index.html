@@ -3888,12 +3888,15 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay){cl
 </script>
 
 <style id="vs-extras-alinhamento">
-#painelDiaExtras > div, #painelMesExtras > div {
- display:flex; align-items:center; justify-content:space-between; gap:12px;
- padding:9px 0; border-bottom:1px solid #dbe4ef;
+/* Linhas de renda extra usam a mesma grade e divisórias das demais receitas. */
+#inicio #painelDiaExtras, #inicio #painelMesExtras {display:contents;}
+#inicio .vs-home-lines #painelDiaExtras > div,
+#inicio .vs-home-lines #painelMesExtras > div {
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:10px 0;border-bottom:1px solid #e2e9f2;font-size:14px;
 }
-#painelDiaExtras > div > span, #painelMesExtras > div > span {flex:1;min-width:0;overflow-wrap:anywhere;}
-#painelDiaExtras > div > b, #painelMesExtras > div > b {flex:none;white-space:nowrap;text-align:right;}
+#inicio #painelDiaExtras > div > span, #inicio #painelMesExtras > div > span {min-width:0;overflow-wrap:anywhere;}
+#inicio #painelDiaExtras > div > b, #inicio #painelMesExtras > div > b {margin-left:auto;white-space:nowrap;text-align:right;}
 </style>
 </body>
 </html>
