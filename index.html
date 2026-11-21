@@ -1957,8 +1957,24 @@ async function updateDashboard(){
   pagamentos=[...porId.values()];
  }
 
+ // Consulta direta da data escolhida: evita que o limite de linhas da consulta mensal
+ // omita lançamentos recentes do Movimento do Dia.
+ const [diaPorPagamento,diaPorRecebimento]=await Promise.all([
+  sb.from('Pagamentos').select('id,tipo,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').eq('data_pagamento',diaConsulta),
+  sb.from('Pagamentos').select('id,tipo,valor_total,taxa_matricula_valor,data_pagamento,data_recebimento,status_recebimento').eq('data_recebimento',diaConsulta)
+ ]);
+ if(diaPorPagamento.error||diaPorRecebimento.error){
+  document.getElementById('painelErro').textContent='Não foi possível consultar o movimento da data selecionada.';
+  return;
+ }
+ const movimentosDia=new Map();
+ for(const p of [...(diaPorPagamento.data||[]),...(diaPorRecebimento.data||[])]){
+  if(String(p.status_recebimento||'').trim().toLowerCase()==='pendente')continue;
+  const dia=p.data_recebimento||p.data_pagamento;
+  if(dia===diaConsulta)movimentosDia.set(String(p.id),{...p,dia});
+ }
  function calcular(dia){
-  const lista=pagamentos.filter(p=>!dia||p.dia===dia);
+  const lista=dia?[...movimentosDia.values()]:pagamentos;
   const soma=f=>lista.filter(f).reduce((n,p)=>n+Number(p.valor_total||0),0);
   const tipo=p=>String(p.tipo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
   const taxa=lista.reduce((n,p)=>n+(tipo(p)==='mensalidade'?Number(p.taxa_matricula_valor||0):(/taxa.*matricul/.test(tipo(p))?Number(p.valor_total||0):0)),0);
